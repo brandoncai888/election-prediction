@@ -1,0 +1,372 @@
+{
+  "built_at": "2026-10-21T21:31:45+00:00",
+  "method": "For each midterm 2010-2022 the same Google News group searches used live are re-run for the equivalent pre-election window (30 days ending 13 days before Election Day, matching the 2026 cutoff) and scored with the same rules, with that year's White House party for the referendum rule. The outcome is each racial group's CES House swing beyond what its usual midterm responsiveness predicts:",
+  "coefficient_pp_per_unit": 2.044797024173179,
+  "coefficient_se": 5.121932711253833,
+  "fit": {
+    "n": 10,
+    "beta_wls": 7.537800580539147,
+    "se_wls": 9.834020023948451,
+    "dispersion": 1.0,
+    "beta": 2.044797024173179,
+    "se": 5.121932711253833,
+    "loo_rmse_pp": 1.7363613780260472,
+    "zero_effect_rmse_pp": 1.751338895870714
+  },
+  "prior_sd": 6.0,
+  "evidence_half_articles": 8.0,
+  "cap_pp": 12.0,
+  "ratios": {
+    "hispanic": 0.98603,
+    "black": 1.0564,
+    "asian": 0.98888,
+    "white": 0.73784
+  },
+  "years": {
+    "2010": {
+      "window": [
+        "2010-09-21",
+        "2010-10-20"
+      ],
+      "articles": 33,
+      "incumbent": "democratic",
+      "groups": {
+        "hispanic": {
+          "signal": -0.045523,
+          "articles": 4,
+          "publishers": 4
+        },
+        "black": {
+          "signal": -0.0386,
+          "articles": 1,
+          "publishers": 1
+        },
+        "asian": {
+          "signal": null,
+          "articles": 0,
+          "publishers": 0
+        },
+        "white": {
+          "signal": null,
+          "articles": 0,
+          "publishers": 0
+        }
+      }
+    },
+    "2014": {
+      "window": [
+        "2014-09-23",
+        "2014-10-22"
+      ],
+      "articles": 90,
+      "incumbent": "democratic",
+      "groups": {
+        "hispanic": {
+          "signal": -0.2307357142857143,
+          "articles": 7,
+          "publishers": 7
+        },
+        "black": {
+          "signal": -0.2574,
+          "articles": 2,
+          "publishers": 2
+        },
+        "asian": {
+          "signal": null,
+          "articles": 0,
+          "publishers": 0
+        },
+        "white": {
+          "signal": null,
+          "articles": 0,
+          "publishers": 0
+        }
+      }
+    },
+    "2018": {
+      "window": [
+        "2018-09-25",
+        "2018-10-24"
+      ],
+      "articles": 147,
+      "incumbent": "republican",
+      "groups": {
+        "hispanic": {
+          "signal": 0.16285599999999997,
+          "articles": 5,
+          "publishers": 5
+        },
+        "black": {
+          "signal": 0.2371026,
+          "articles": 5,
+          "publishers": 5
+        },
+        "asian": {
+          "signal": 0.3454,
+          "articles": 1,
+          "publishers": 1
+        },
+        "white": {
+          "signal": 0.292351,
+          "articles": 1,
+          "publishers": 1
+        }
+      }
+    },
+    "2022": {
+      "window": [
+        "2022-09-27",
+        "2022-10-26"
+      ],
+      "articles": 224,
+      "incumbent": "democratic",
+      "groups": {
+        "hispanic": {
+          "signal": -0.31219588821789823,
+          "articles": 8,
+          "publishers": 7
+        },
+        "black": {
+          "signal": 0.07112493750000001,
+          "articles": 18,
+          "publishers": 16
+        },
+        "asian": {
+          "signal": null,
+          "articles": 0,
+          "publishers": 0
+        },
+        "white": {
+          "signal": null,
+          "articles": 0,
+          "publishers": 0
+        }
+      }
+    }
+  },
+  "points": [
+    {
+      "year": 2010,
+      "group": "hispanic",
+      "shift_pp": -9.186,
+      "se_pp": 2.622,
+      "national_shift_pp": -7.5373,
+      "deviation_pp": -1.7539960810000004,
+      "signal": -0.045523,
+      "articles": 4,
+      "evidence": -0.015174333333333333,
+      "x": -0.006629111845657792,
+      "y": -3.9743205449763352
+    },
+    {
+      "year": 2010,
+      "group": "black",
+      "shift_pp": -3.1903,
+      "se_pp": 1.3792,
+      "national_shift_pp": -7.5373,
+      "deviation_pp": 4.7721037200000005,
+      "signal": -0.0386,
+      "articles": 1,
+      "evidence": -0.004288888888888889,
+      "x": 0.004256332598786652,
+      "y": 2.5517792560236656
+    },
+    {
+      "year": 2010,
+      "group": "asian",
+      "shift_pp": -4.7761,
+      "se_pp": 6.1526,
+      "national_shift_pp": -7.5373,
+      "deviation_pp": 2.677385224,
+      "signal": null,
+      "articles": 0,
+      "evidence": null,
+      "x": null,
+      "y": 0.45706076002366514
+    },
+    {
+      "year": 2010,
+      "group": "white",
+      "shift_pp": -6.6304,
+      "se_pp": 0.62856,
+      "national_shift_pp": -7.5373,
+      "deviation_pp": -1.0690785679999992,
+      "signal": null,
+      "articles": 0,
+      "evidence": null,
+      "x": null,
+      "y": -3.289403031976334
+    },
+    {
+      "year": 2014,
+      "group": "hispanic",
+      "shift_pp": -5.1518,
+      "se_pp": 2.6163,
+      "national_shift_pp": -4.0112,
+      "deviation_pp": -1.196636464,
+      "signal": -0.2307357142857143,
+      "articles": 7,
+      "evidence": -0.10767666666666667,
+      "x": -0.033444711257442306,
+      "y": -2.326609326326409
+    },
+    {
+      "year": 2014,
+      "group": "black",
+      "shift_pp": -1.5247,
+      "se_pp": 1.2266,
+      "national_shift_pp": -4.0112,
+      "deviation_pp": 2.712731679999999,
+      "signal": -0.2574,
+      "articles": 2,
+      "evidence": -0.051480000000000005,
+      "x": 0.02275195540922436,
+      "y": 1.5827588176735905
+    },
+    {
+      "year": 2014,
+      "group": "asian",
+      "shift_pp": -9.3415,
+      "se_pp": 5.0087,
+      "national_shift_pp": -4.0112,
+      "deviation_pp": -5.3749045440000005,
+      "signal": null,
+      "articles": 0,
+      "evidence": null,
+      "x": null,
+      "y": -6.504877406326409
+    },
+    {
+      "year": 2014,
+      "group": "white",
+      "shift_pp": -2.6949,
+      "se_pp": 0.61226,
+      "national_shift_pp": -4.0112,
+      "deviation_pp": 0.26472380799999984,
+      "signal": null,
+      "articles": 0,
+      "evidence": null,
+      "x": null,
+      "y": -0.8652490543264089
+    },
+    {
+      "year": 2018,
+      "group": "hispanic",
+      "shift_pp": 3.9386,
+      "se_pp": 2.0886,
+      "national_shift_pp": 4.2252,
+      "deviation_pp": -0.22757395599999963,
+      "signal": 0.16285599999999997,
+      "articles": 5,
+      "evidence": 0.06263692307692306,
+      "x": 0.021439546769864627,
+      "y": -0.12472569155586855
+    },
+    {
+      "year": 2018,
+      "group": "black",
+      "shift_pp": 4.7962,
+      "se_pp": 1.1882,
+      "national_shift_pp": 4.2252,
+      "deviation_pp": 0.3326987199999998,
+      "signal": 0.2371026,
+      "articles": 5,
+      "evidence": 0.0911933076923077,
+      "x": 0.04999593138524926,
+      "y": 0.43554698444413087
+    },
+    {
+      "year": 2018,
+      "group": "asian",
+      "shift_pp": 3.7097,
+      "se_pp": 3.2033,
+      "national_shift_pp": 4.2252,
+      "deviation_pp": -0.46851577599999983,
+      "signal": 0.3454,
+      "articles": 1,
+      "evidence": 0.038377777777777775,
+      "x": -0.0028195985292806605,
+      "y": -0.36566751155586874
+    },
+    {
+      "year": 2018,
+      "group": "white",
+      "shift_pp": 2.9836,
+      "se_pp": 0.53364,
+      "national_shift_pp": 4.2252,
+      "deviation_pp": -0.13392156800000032,
+      "signal": 0.292351,
+      "articles": 1,
+      "evidence": 0.03248344444444445,
+      "x": -0.008713931862613988,
+      "y": -0.031073303555869236
+    },
+    {
+      "year": 2022,
+      "group": "hispanic",
+      "shift_pp": -6.7637,
+      "se_pp": 2.1566,
+      "national_shift_pp": -3.4595,
+      "deviation_pp": -3.3525292150000006,
+      "signal": -0.31219588821789823,
+      "articles": 8,
+      "evidence": -0.15609794410894912,
+      "x": -0.10993155128862997,
+      "y": -0.24693583035777333
+    },
+    {
+      "year": 2022,
+      "group": "black",
+      "shift_pp": -6.5459,
+      "se_pp": 1.3392,
+      "national_shift_pp": -3.4595,
+      "deviation_pp": -2.8912842,
+      "signal": 0.07112493750000001,
+      "articles": 18,
+      "evidence": 0.049240341346153856,
+      "x": 0.095406734166473,
+      "y": 0.21430918464222737
+    },
+    {
+      "year": 2022,
+      "group": "asian",
+      "shift_pp": 0.24273,
+      "se_pp": 3.3136,
+      "national_shift_pp": -3.4595,
+      "deviation_pp": 3.6637603599999995,
+      "signal": null,
+      "articles": 0,
+      "evidence": null,
+      "x": null,
+      "y": 6.769353744642227
+    },
+    {
+      "year": 2022,
+      "group": "white",
+      "shift_pp": -2.6116,
+      "se_pp": 0.56847,
+      "national_shift_pp": -3.4595,
+      "deviation_pp": -0.05904252000000021,
+      "signal": null,
+      "articles": 0,
+      "evidence": null,
+      "x": null,
+      "y": 3.046550864642227
+    }
+  ],
+  "errors": [],
+  "queries": [
+    "\"Latino voters\"",
+    "\"Hispanic voters\"",
+    "Latino immigration deportations midterms",
+    "\"Black voters\"",
+    "Black voters \"voting rights\"",
+    "\"Asian American voters\"",
+    "\"Native American voters\"",
+    "\"white voters\" midterms",
+    "\"working-class\" white voters",
+    "ICE raids midterm election",
+    "\"Voting Rights Act\" redistricting 2026",
+    "DEI civil rights midterms"
+  ]
+}

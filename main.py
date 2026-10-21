@@ -25,6 +25,11 @@ def parser():
     elastic=subs.add_parser('build-elasticity',help='Build demographic response ratios from the CES midterm analysis summary')
     elastic.add_argument('--summary',type=Path)
     subs.add_parser('fetch-anchors',help='Download actual 2024 presidential results by district and state (baseline anchors)')
+    subs.add_parser('fetch-polls',help='Fetch generic-ballot aggregator averages (Wikipedia 2026 House page)')
+    polls=subs.add_parser('import-polls',help='Import generic-ballot averages CSV; see templates/polls.csv')
+    polls.add_argument('csv',type=Path)
+    subs.add_parser('build-midterm-inputs',help='Freeze midterm out-party gains and CES validated turnout by demographic cell')
+    subs.add_parser('build-news-effect',help='Fit the group news coefficient on 2010-2022 midterm coverage and CES group swings')
     table=subs.add_parser('forecast-table',help='Write the per-race win probability / margin table as CSV')
     table.add_argument('--as-of',default='2026-10-21')
     table.add_argument('--out',type=Path,default=ROOT/'data'/'forecast_table_2026.csv')
@@ -97,6 +102,18 @@ def main(argv=None):
         elif args.command=='fetch-anchors':
             from electiondb.anchors import fetch_anchors
             result=fetch_anchors(conn,cache_dir=cache)
+        elif args.command=='fetch-polls':
+            from electiondb.environment import fetch_polls
+            result=fetch_polls(conn,cache_dir=cache)
+        elif args.command=='import-polls':
+            from electiondb.environment import import_polls
+            result=import_polls(conn,args.csv)
+        elif args.command=='build-midterm-inputs':
+            from electiondb.environment import build_midterm_inputs
+            result=build_midterm_inputs()
+        elif args.command=='build-news-effect':
+            from electiondb.newseffect import build_news_effect
+            result=build_news_effect(cache_dir=cache)
         elif args.command=='forecast-table':
             from electiondb.forecasts import write_forecast_table
             result=write_forecast_table(conn,args.as_of,args.out)
@@ -122,12 +139,19 @@ def main(argv=None):
                 news_report['group_news']=fetch_group_news(conn,cache_dir=cache)
                 news_report['errors']+=news_report['group_news']['errors']
                 news_report['scoring']=rescore_news(conn,cache_dir=cache)
+                from electiondb.environment import fetch_polls
+                try:
+                    news_report['polls']={k:v for k,v in fetch_polls(conn,cache_dir=cache).items() if k!='rows'}
+                except (ValueError,OSError,URLError,KeyError) as exc:
+                    news_report['errors'].append({'source':'generic-ballot polls','error':str(exc)})
             from electiondb.predict import predict_all
             from electiondb.forecasts import save_predictions
             payload=predict_all(conn,as_of=args.as_of,cache_dir=cache)
             result=save_predictions(conn,payload)
             from electiondb.forecasts import write_forecast_table
             result['table']=write_forecast_table(conn,args.as_of,ROOT/'data'/'forecast_table_2026.csv')
+            from electiondb.forecasts import write_bjc_prediction
+            result['bjc_prediction']=write_bjc_prediction(conn,args.as_of,ROOT/'bjc_congress_prediction.csv')
             result['chambers']={k:{f:v[f] for f in v if f!='distribution'} for k,v in payload['model']['chambers'].items()}
             if news_report:
                 result['news_refresh']=news_report

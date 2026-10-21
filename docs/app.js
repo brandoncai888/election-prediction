@@ -275,7 +275,7 @@
     const experimental=/experimental|forecast/.test(modelStatus) || finite(projection.dem_share);
     $("model-status").textContent=calibrated ? "Calibrated model" : experimental ? "Experimental model" : /scenario/.test(modelStatus) ? "Scenario only" : /baseline/.test(modelStatus) ? "Baseline only" : "Unavailable";
     $("model-status").classList.toggle("calibrated",calibrated);
-    $("projection-message").textContent=projection.message || "The model applies news tone and issue-content changes to 2024 demographic voting baselines, then combines the groups using local population weights. News-response coefficients are explicit assumptions and have not been validated against past elections.";
+    $("projection-message").textContent=projection.message || "The model shifts 2024 demographic voting baselines by the national environment and group-specific news, then combines the groups by expected midterm voters.";
     const projected=selected?.projected_dem_share ?? projection.dem_share;
     show("forecast-output",(calibrated || experimental) && finite(projected));
     if((calibrated || experimental) && finite(projected)){
@@ -290,25 +290,27 @@
     const feature=projection.news_feature || {};
     $("news-feature").textContent=finite(feature.difference) ? `30-day net partisan news signal = ${feature.difference.toFixed(3)} · ${fmt(feature.article_count)} observations · ${fmt(feature.publisher_count)} publishers. Assumed news shift = this signal × your coefficient.` : "A news-based shift needs party-attributed observations in the 30-day window. An additional manual shift can still be explored where a baseline exists.";
     const drivers=Array.isArray(projection.drivers)?projection.drivers:[];
-    $("news-signal-summary").innerHTML=`<h4>The news signal behind this forecast</h4><div class="news-signal-stats"><span>Net partisan signal<strong>${finite(feature.difference)?`${feature.difference>0?"+":""}${feature.difference.toFixed(3)}`:"Unavailable"}</strong></span><span>Party-attributed articles<strong>${fmt(feature.attributed_article_count)}</strong></span><span>Publishers<strong>${fmt(feature.publisher_count)}</strong></span></div><p>Positive signals favor Democrats; negative favor Republicans. The national signal moves every group in proportion to how strongly that group swung in the 2018 midterm (CES survey). Coverage of a specific racial group then moves that group further, by how much more or less favorable it is than the overall news.</p>${drivers.length?`<div class="news-driver-list">${drivers.filter(driver=>Math.abs(driver.contribution_pp)>.00001).map(driver=>`<span>${escape(titleCase(driver.issue))}<b>${pp(driver.contribution_pp)}</b></span>`).join("")}</div>`:""}${renderGroupSignals(feature)}`;
+    const env=projection.national_environment || {};
+    const margin=share=>finite(share)?`${share>=.5?"D":"R"} +${Math.abs(200*share-100).toFixed(1)}`:"—";
+    $("news-signal-summary").innerHTML=`<h4>What moves this forecast from 2024</h4><div class="news-signal-stats"><span>Baseline (House vote)<strong>${margin(env.target_two_party_d)}</strong></span><span>Final, with turnout &amp; news<strong>${margin(env.final_two_party_d)}</strong></span><span>Typical midterm gain<strong>${margin(env.prior_two_party_d)}</strong></span><span>Generic-ballot polls<strong>${margin(env.poll_two_party_d)}</strong></span></div><p>The national baseline averages the typical out-party midterm gain since 2010 with the generic-ballot polling average. Every group moves toward it in proportion to how strongly that group swung in the 2018 midterm (CES survey). Each group is weighted by its validated midterm turnout, and news coverage of a specific racial group then moves that group on top of the baseline, by a coefficient fitted to the 2010–2022 midterms.</p>${drivers.length?`<div class="news-driver-list">${drivers.map(driver=>`<span>${escape(titleCase(driver.issue))} (margin)<b>${pp(2*driver.contribution_pp)}</b></span>`).join("")}</div>`:""}${renderGroupSignals(feature, state.summary?.model?.news_response)}`;
     renderScenario();
     if (Number($("news-coefficient").value) || Number($("scenario-shift").value)) requestScenario();
   }
 
   const groupNames={hispanic:"Hispanic / Latino",black:"Black",asian:"Asian American",white:"White",native:"Native American"};
-  function renderGroupSignals(feature) {
+  function renderGroupSignals(feature, response) {
     const groups=feature.groups || {};
     if(!Object.keys(groups).length)return "";
-    const national=finite(feature.difference)?feature.difference:0;
+    const coefficient=finite(response?.coefficient_pp_per_unit)?response.coefficient_pp_per_unit:null;
     const rows=Object.entries(groupNames).map(([key,label])=>{
       const item=groups[key] || {};
-      const deviation=finite(item.signal)?Math.max(-1,Math.min(1,item.signal-national)):null;
       const strength=(item.articles || 0)/((item.articles || 0)+8);
-      const effect=finite(deviation)?6*deviation*strength:null;
+      // The same uncentered shift the forecast adds to this group.
+      const effect=finite(item.signal)&&finite(coefficient)?coefficient*item.signal*strength:null;
       const headlines=(item.top_articles || []).slice(0,3).map(a=>`<li><b class="${a.direction>=0?"swing-dem":"swing-rep"}">${a.direction>=0?"D":"R"}</b> ${escape(a.title)} <small>${escape(a.source)}${a.kind==="incumbent_referendum"?" · policy coverage, governing-party rule":""}</small></li>`).join("");
       return `<tr><td>${escape(label)}</td><td class="numeric">${finite(item.signal)?`${item.signal>0?"+":""}${item.signal.toFixed(3)}`:"—"}</td><td class="numeric">${fmt(item.articles || 0)}<small>${fmt(item.relevant_articles || 0)} relevant</small></td><td class="numeric ${effect>=0?"swing-dem":"swing-rep"}">${finite(effect)?pp(effect):"—"}</td></tr>${headlines?`<tr class="group-headlines"><td colspan="4"><ul>${headlines}</ul></td></tr>`:""}`;
     }).join("");
-    return `<div class="group-signals"><h4>Racial-group news signals</h4><p>Group signal = party direction of coverage about that group or its issues (immigration enforcement, voting rights, policing…). Extra shift = 6 pts × (group signal − national signal) × evidence strength, added to that group's cohorts only.</p><div class="data-table-wrap"><table><thead><tr><th>Group</th><th class="numeric">Group signal</th><th class="numeric">Scored articles</th><th class="numeric">Extra shift for group</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+    return `<div class="group-signals"><h4>Racial-group news signals</h4><p>Group signal = party direction of coverage about that group or its issues (immigration enforcement, voting rights, policing…). Shift = ${finite(coefficient)?`${coefficient.toFixed(2)}${finite(response?.coefficient_se)?` ± ${response.coefficient_se.toFixed(2)}`:""}`:"fitted"} pts × group signal × evidence strength, added on top of the national baseline. The coefficient is fitted to 2010–2022 midterm coverage and CES group swings and is imprecise.</p><div class="data-table-wrap"><table><thead><tr><th>Group</th><th class="numeric">Group signal</th><th class="numeric">Scored articles</th><th class="numeric">Shift for group</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
   }
 
   function renderRaceForecast(projection) {
@@ -321,7 +323,7 @@
     const winner=margin>=0 ? "Democratic" : "Republican";
     const color=margin>=0?"#1f4e87":"#9d3346";
     const coverage=aggregate.news_article_count ?? aggregate.news_feature?.article_count ?? projection.news_feature?.article_count;
-    $("race-forecast-card").innerHTML=`<div class="race-forecast-top"><div><p class="eyebrow">2026 POPULATION-WEIGHTED FORECAST</p><strong style="color:${color}">${winner} +${Math.abs(margin).toFixed(1)}</strong><span>Projected two-party margin · experimental model</span>${finite(aggregate.win_probability_d)?`<span class="win-odds">Win probability: <b style="color:#1c408c">D ${winPct(aggregate.win_probability_d)}</b> · <b style="color:#bf1d29">R ${winPct(1-aggregate.win_probability_d)}</b> · ${escape(ratingLabel(aggregate.rating))}</span>`:""}</div><a href="#outlook">Inspect the demographic model ↓</a></div><div class="race-share-labels"><span>Democratic <b>${pct(share)}</b></span><span>Republican <b>${pct(1-share)}</b></span></div><div class="race-share-bar"><span style="width:${share*100}%"></span></div><div class="race-forecast-facts"><span>2024 baseline D share <b>${pct(aggregate.baseline_dem_share)}</b></span><span>D share change <b>${pp(swing)}</b></span><span>News shift to margin <b>${pp(aggregate.news_margin_shift_pp)}</b></span></div><p class="race-forecast-note">Local demographic population weights combine the cohort forecasts. Residents age 25+ are a population proxy; citizenship and differential turnout are not modeled.</p>`;
+    $("race-forecast-card").innerHTML=`<div class="race-forecast-top"><div><p class="eyebrow">2026 TURNOUT-WEIGHTED FORECAST</p><strong style="color:${color}">${winner} +${Math.abs(margin).toFixed(1)}</strong><span>Projected two-party margin · experimental model</span>${finite(aggregate.win_probability_d)?`<span class="win-odds">Win probability: <b style="color:#1c408c">D ${winPct(aggregate.win_probability_d)}</b> · <b style="color:#bf1d29">R ${winPct(1-aggregate.win_probability_d)}</b> · ${escape(ratingLabel(aggregate.rating))}</span>`:""}</div><a href="#outlook">Inspect the demographic model ↓</a></div><div class="race-share-labels"><span>Democratic <b>${pct(share)}</b></span><span>Republican <b>${pct(1-share)}</b></span></div><div class="race-share-bar"><span style="width:${share*100}%"></span></div><div class="race-forecast-facts"><span>2024 baseline D share <b>${pct(aggregate.baseline_dem_share)}</b></span><span>National environment <b>${pp(aggregate.environment_shift_pp)}</b></span><span>Midterm turnout <b>${pp(aggregate.turnout_shift_pp)}</b></span><span>Group news <b>${pp(aggregate.news_margin_shift_pp)}</b></span></div><p class="race-forecast-note">Shifts are in margin points. Cohorts are weighted by population × validated turnout for their race, sex and education. Residents age 25+ are the population base; noncitizens are not removed.</p>`;
   }
 
   function renderForecastCohorts() {

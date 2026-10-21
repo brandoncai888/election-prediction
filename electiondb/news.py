@@ -88,7 +88,7 @@ SENTENCE = re.compile(r'(?<=[.!?;])\s+|\n+')
 
 
 @lru_cache(maxsize=None)
-def group_features(text):
+def group_features(text, incumbent=INCUMBENT_PARTY):
     """Per-group relevance and party direction (+ favors D, - favors R).
 
     Direction uses the local party-outcome rules on sentences about the group.
@@ -96,7 +96,8 @@ def group_features(text):
     issue (raids, deportations, voting rights...), the sign comes from VADER tone
     under an incumbent-party referendum assumption: negative policy coverage
     counts against the governing party, at half weight. A bare group mention
-    with no party cue stays neutral.
+    with no party cue stays neutral. ``incumbent`` is the White House party,
+    so historical coverage can be scored for its own election year.
     """
     sentences = [s for s in SENTENCE.split(text or '') if s.strip()]
     result = {}
@@ -119,7 +120,7 @@ def group_features(text):
             policy = ' '.join(s for s in about if any(p.search(s) for _, p in GROUP_ISSUE_PATTERNS[group]))
             compound = _analyzer().polarity_scores(policy)['compound']
             if abs(compound) >= .05:
-                sign = 1 if INCUMBENT_PARTY == 'republican' else -1
+                sign = 1 if incumbent == 'republican' else -1
                 direction, kind = -sign * REFERENDUM_WEIGHT * compound, 'incumbent_referendum'
         result[group] = {'relevance': relevance, 'direction': direction, 'kind': kind, 'named': bool(named),
                          'issue_terms': issues, 'cues': [c['cue'] for p in evidence.values() for c in p][:6]}
@@ -420,6 +421,35 @@ def rescore_news(conn,cache_dir=Path('data/cache')):
     return counts | {'method':METHOD}
 
 
+def aggregate_groups(articles):
+    """Per-group signals from articles carrying 'weight', 'groups' and 'source_name'.
+
+    Each article is weighted by its own weight (recency x geography) times its
+    group relevance; publishers are then averaged equally. Shared by the live
+    forecast and the historical news-effect fit so both measure the same thing.
+    """
+    groups = {}
+    for group in GROUP_NAMES:
+        scored = [row for row in articles if row['groups'].get(group,{}).get('direction') is not None]
+        relevant = [row for row in articles if group in row['groups']]
+        by_pub = {}
+        for row in scored:
+            by_pub.setdefault(row['source_name'],[]).append(row)
+        means = []
+        for rows_ in by_pub.values():
+            w = [row['weight']*row['groups'][group]['relevance'] for row in rows_]
+            if sum(w):
+                means.append(sum(wi*row['groups'][group]['direction'] for wi,row in zip(w,rows_))/sum(w))
+        groups[group] = {'signal': sum(means)/len(means) if means else None, 'articles': len(scored),
+            'relevant_articles': len(relevant), 'publishers': len(means),
+            'party_attributed': sum(row['groups'][group]['kind']=='party_attributed' for row in scored),
+            'incumbent_referendum': sum(row['groups'][group]['kind']=='incumbent_referendum' for row in scored),
+            'salience': len(relevant)/len(articles) if articles else 0.0,
+            'top_articles': [{'title':row['title'],'source':row['source_name'],'direction':row['groups'][group]['direction'],
+                              'kind':row['groups'][group]['kind']} for row in sorted(scored,key=lambda r:-r['weight']*abs(r['groups'][group]['direction']))[:5]]}
+    return groups
+
+
 def news_signals(conn,race,as_of,days=30):
     """Bounded party/content signals with UTC publication-date cutoffs."""
     if not 1<=days<=366:
@@ -476,27 +506,7 @@ def news_signals(conn,race,as_of,days=30):
         return sum(means)/len(means) if means else None
 
     difference = mean_publishers(lambda row:row['direction'],lambda row:row['direction'] is not None)
-    groups = {}
-    for group in GROUP_NAMES:
-        scored = [row for row in articles if row['groups'].get(group,{}).get('direction') is not None]
-        relevant = [row for row in articles if group in row['groups']]
-        # Weight each article by recency x geography x group relevance, then
-        # average publishers equally, as for the national party signal.
-        by_pub = {}
-        for row in scored:
-            by_pub.setdefault(row['source_name'],[]).append(row)
-        means = []
-        for rows_ in by_pub.values():
-            w = [row['weight']*row['groups'][group]['relevance'] for row in rows_]
-            if sum(w):
-                means.append(sum(wi*row['groups'][group]['direction'] for wi,row in zip(w,rows_))/sum(w))
-        groups[group] = {'signal': sum(means)/len(means) if means else None, 'articles': len(scored),
-            'relevant_articles': len(relevant), 'publishers': len(means),
-            'party_attributed': sum(row['groups'][group]['kind']=='party_attributed' for row in scored),
-            'incumbent_referendum': sum(row['groups'][group]['kind']=='incumbent_referendum' for row in scored),
-            'salience': len(relevant)/len(articles) if articles else 0.0,
-            'top_articles': [{'title':row['title'],'source':row['source_name'],'direction':row['groups'][group]['direction'],
-                              'kind':row['groups'][group]['kind']} for row in sorted(scored,key=lambda r:-r['weight']*abs(r['groups'][group]['direction']))[:5]]}
+    groups = aggregate_groups(articles)
     topics = {topic:mean_publishers(lambda row,topic=topic:(row['direction'] or 0)*row['topics'].get(topic,0)) or 0.0 for topic in TOPIC_TERMS}
     salience = {topic:mean_publishers(lambda row,topic=topic:row['topics'].get(topic,0)) or 0.0 for topic in TOPIC_TERMS}
     return {'start':start.isoformat(),'as_of':as_of,'difference':difference,

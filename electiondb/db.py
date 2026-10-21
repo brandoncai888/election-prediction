@@ -104,6 +104,12 @@ CREATE TABLE IF NOT EXISTS demographic_forecasts (
  swing_pp REAL NOT NULL,model_version TEXT NOT NULL,details TEXT NOT NULL,
  PRIMARY KEY(race_id,as_of,race_group,sex,education)
 );
+CREATE TABLE IF NOT EXISTS poll_aggregates (
+ aggregator TEXT NOT NULL, updated TEXT NOT NULL, dates_administered TEXT NOT NULL,
+ dem REAL NOT NULL CHECK(dem BETWEEN 0 AND 100), rep REAL NOT NULL CHECK(rep BETWEEN 0 AND 100),
+ url TEXT NOT NULL, fetched_at TEXT NOT NULL, source_id TEXT NOT NULL REFERENCES sources(source_id),
+ PRIMARY KEY(aggregator,updated)
+);
 CREATE VIEW IF NOT EXISTS demographic_coverage AS
  SELECT geography_id,acs_year,COUNT(*) AS cells,SUM(population) AS population_25_plus,
  SUM(CASE WHEN population IS NULL THEN 1 ELSE 0 END) AS missing_cells
@@ -116,9 +122,9 @@ LIMITATIONS = [
  'Census sex is not a measure of gender identity. Race categories include people of Hispanic ethnicity; Hispanic origin is a separate concept.',
  'House projections use 119th-Congress population and geographic baselines as proxies where 2026 boundaries changed. The House map is a seat cartogram and does not present older boundaries as current ones.',
  'Ballots do not record race, sex, or education. Historical demographic vote shares are weighted survey estimates, not official demographic returns. Small samples are suppressed.',
- 'The 2024 demographic baseline is fitted to CES responses. News response coefficients are explicit priors; no historically calibrated causal news effect or election win probability is claimed.',
+ 'The 2024 demographic baseline is fitted to CES responses. The national environment averages the typical midterm out-party gain with generic-ballot polling. The group news coefficient is fitted to four past midterms and is imprecise; it is not a causal estimate.',
  'Forecasts combine mutually exclusive Hispanic/non-Hispanic cohorts. Nonwhite Hispanic allocation is estimated within each sex and education cell; uncertainty in this bridge is not measured.',
- 'Predicted race shares are population-standardized preferences for adults age 25+ under equal-turnout assumptions, an experimental proxy for the full electorate.',
+ 'Predicted race shares weight adults age 25+ by CES validated turnout for their race, sex and education (2020 for the 2024 baseline, 2018/2022 for 2026). Noncitizens are not removed from the population.',
  'Two-party vote share excludes other candidates. State-level history cannot be substituted for congressional-district observations without a labeled model.',
 ]
 

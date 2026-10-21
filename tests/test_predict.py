@@ -8,9 +8,11 @@ from scipy import sparse
 
 from electiondb.db import SCHEMA
 from electiondb.predict import (
-    EDUCATION, POPULATION_RACES, RAW_RACES, demographic_swing, population_cells,
-    predict_race, _fit_logistic, _matrix, _rating,
+    EDUCATION, POPULATION_RACES, RAW_RACES, finish_race, group_news_pp, population_cells,
+    predict_race, race_inputs, solve_national_swing, win_probability, _fit_logistic, _matrix, _rating,
 )
+
+EFFECT = {"coefficient_pp_per_unit": 4.0, "cap_pp": 12.0}
 
 
 class ForecastTests(unittest.TestCase):
@@ -59,7 +61,7 @@ class ForecastTests(unittest.TestCase):
 
     def test_missing_ethnicity_does_not_silently_match_incompatible_race_schemes(self):
         self.conn.execute("DELETE FROM demographics WHERE race_group='hispanic'")
-        result = predict_race(self.conn, self.race, model=self.model, signals=self.news)
+        result = self.predict(signals=self.news)
         self.assertEqual(result["status"], "missing_population")
         self.assertIsNone(result["dem_share"])
         self.assertEqual(result["groups"], [])
@@ -73,56 +75,73 @@ class ForecastTests(unittest.TestCase):
         cell = next(c for c in cells if (c["race_group"], c["sex"], c["education"]) == ("black_non_hispanic", "male", EDUCATION[0]))
         self.assertEqual(cell["population"], 75)
 
-    def test_aggregate_exactly_equals_population_weighted_cohort_predictions(self):
-        result = predict_race(self.conn, self.race, model=self.model, signals=self.news)
+    def predict(self, race=None, signals=None, swing=0.0, center=0.0):
+        return predict_race(self.conn, race or self.race, model=self.model, signals=signals or self.empty_news,
+                            national_k=1.0, swing_pp=swing, news_center_pp=center)
+
+    def test_aggregate_exactly_equals_voter_weighted_cohort_predictions(self):
+        result = self.predict(signals=self.news, swing=4.0)
         self.assertEqual(result["status"], "experimental_forecast")
         self.assertEqual(len(result["groups"]), 32)
         self.assertAlmostEqual(sum(g["weight"] for g in result["groups"]), 1)
-        expected = sum(g["population"] * g["projected_dem_share"] for g in result["groups"]) / 4800
+        expected = sum(g["weight"] * g["projected_dem_share"] for g in result["groups"])
         self.assertAlmostEqual(result["dem_share"], expected)
         self.assertAlmostEqual(result["dem_share"] + result["rep_share"], 1)
         self.assertAlmostEqual(result["margin_pp"], (2 * expected - 1) * 100)
         self.assertGreater(result["swing_pp"], 0)
-        self.assertEqual(result["news_coefficient_status"], "assumed_prior_not_historically_fitted")
         json.dumps(result, allow_nan=False)
 
-    def test_no_news_preserves_fitted_baseline_for_every_demographic(self):
-        result = predict_race(self.conn, self.race, model=self.model, signals=self.empty_news)
-        self.assertEqual(result["news_status"], "no_attributed_news_baseline_only")
-        self.assertAlmostEqual(result["dem_share"], result["baseline_dem_share"])
+    def test_margin_change_is_turnout_plus_environment_plus_news(self):
+        news = {**self.news, "groups": {"hispanic": {"signal": .8, "articles": 40}}}
+        inputs = race_inputs(self.conn, self.race, model=self.model, signals=news, effect=EFFECT)
+        result = finish_race(inputs, 3.0, .5)
+        parts = result["turnout_shift_pp"] + result["environment_shift_pp"] + result["news_margin_shift_pp"]
+        self.assertAlmostEqual(result["margin_pp"] - result["baseline_margin_pp"], parts)
+        self.assertAlmostEqual(result["win_probability_d_without_news"],
+                               win_probability(result["margin_pp"] - result["news_margin_shift_pp"], "house"))
+
+    def test_zero_swing_and_no_news_keep_every_cohort_baseline(self):
+        result = self.predict()
+        self.assertEqual(result["news_status"], "no_group_news")
+        self.assertAlmostEqual(result["environment_shift_pp"], 0)
+        self.assertAlmostEqual(result["news_margin_shift_pp"], 0)
+        # Only the electorate's composition changes between 2024 and the midterm.
+        self.assertAlmostEqual(result["margin_pp"] - result["baseline_margin_pp"], result["turnout_shift_pp"])
         for group in result["groups"]:
-            self.assertEqual(group["baseline_dem_share"], group["projected_dem_share"])
-            self.assertEqual(group["swing_pp"], 0)
+            self.assertAlmostEqual(group["baseline_dem_share"], group["projected_dem_share"])
 
-    def test_news_direction_content_and_demographic_sensitivities_change_swing(self):
-        positive, _, _ = demographic_swing("white_non_hispanic", "female", EDUCATION[0], self.news)
-        male, _, _ = demographic_swing("white_non_hispanic", "male", EDUCATION[0], self.news)
-        college, _, _ = demographic_swing("white_non_hispanic", "female", EDUCATION[1], self.news)
-        negative_news = {**self.news, "difference": -.5, "topics": {"economy": -.7, "abortion": -.5}}
-        negative, _, _ = demographic_swing("white_non_hispanic", "female", EDUCATION[0], negative_news)
-        # CES 2016->2018: white college women moved ~1.4x the nation, white
-        # non-college women ~0.2x and non-college men ~0.1x.
-        self.assertGreater(college, positive)
-        self.assertGreater(positive, male)
-        self.assertAlmostEqual(positive, -negative)
-        self.assertGreater(positive, 0)
-        immigration = {**self.news, "difference": 0, "topics": {"immigration": .8},
-                       "topic_salience": {"immigration": 1}}
-        hispanic, _, _ = demographic_swing("hispanic", "female", EDUCATION[0], immigration)
-        white, _, _ = demographic_swing("white_non_hispanic", "female", EDUCATION[0], immigration)
-        self.assertGreater(hispanic, white)
+    def test_national_swing_follows_measured_group_responsiveness(self):
+        groups = {(g["race_group"], g["sex"], g["education"]): g for g in self.predict(swing=5.0)["groups"]}
+        college = groups["white_non_hispanic", "female", EDUCATION[1]]["swing_pp"]
+        noncollege_men = groups["white_non_hispanic", "male", EDUCATION[0]]["swing_pp"]
+        # CES 2016->2018: white college women moved ~1.4x the nation, non-college men ~0.1x.
+        self.assertGreater(college, noncollege_men)
+        self.assertGreater(noncollege_men, -1e-9)
 
-    def test_racial_group_news_moves_only_that_group(self):
-        groups = {"hispanic": {"signal": .9, "articles": 100}, "black": {"signal": -.4, "articles": 100}}
-        news = {**self.news, "difference": .2, "topics": {}, "topic_salience": {}, "groups": groups}
-        base = {**news, "groups": {}}
-        hispanic = demographic_swing("hispanic", "male", EDUCATION[0], news)[0] - demographic_swing("hispanic", "male", EDUCATION[0], base)[0]
-        black = demographic_swing("black_non_hispanic", "male", EDUCATION[0], news)[0] - demographic_swing("black_non_hispanic", "male", EDUCATION[0], base)[0]
-        white = demographic_swing("white_non_hispanic", "male", EDUCATION[0], news)[0] - demographic_swing("white_non_hispanic", "male", EDUCATION[0], base)[0]
-        # Deviation from the national signal x 6 pts x evidence strength 100/108.
-        self.assertAlmostEqual(hispanic, 6 * .7 * 100 / 108)
-        self.assertAlmostEqual(black, 6 * -.6 * 100 / 108)
-        self.assertEqual(white, 0)
+    def test_group_news_uses_learned_coefficient_and_moves_only_that_group(self):
+        news = {"groups": {"hispanic": {"signal": .5, "articles": 8}, "black": {"signal": -.25, "articles": 24}}}
+        self.assertAlmostEqual(group_news_pp("hispanic", news, EFFECT)[0], 4.0 * .5 * 8 / 16)
+        self.assertAlmostEqual(group_news_pp("black_non_hispanic", news, EFFECT)[0], 4.0 * -.25 * 24 / 32)
+        self.assertEqual(group_news_pp("white_non_hispanic", news, EFFECT)[0], 0)
+        self.assertEqual(group_news_pp("hispanic", {"groups": {}}, EFFECT)[0], 0)
+        self.assertLessEqual(abs(group_news_pp("hispanic", {"groups": {"hispanic": {"signal": 1e6, "articles": 1e6}}}, EFFECT)[0]), 12)
+
+    def test_baseline_hits_the_target_and_news_and_turnout_add_on_top(self):
+        self.add_population("cd:0602")
+        news = {"groups": {"hispanic": {"signal": .6, "articles": 50}}}
+        inputs = [race_inputs(self.conn, {**self.race, "geography_id": geo}, model=self.model, signals=news, effect=EFFECT)
+                  for geo in ("cd:0601", "cd:0602")]
+        swing, center, detail = solve_national_swing(inputs, .55)
+        self.assertEqual(center, 0)
+        results = [finish_race(item, swing, center) for item in inputs]
+        def national(field, weight):
+            totals = [sum(g["population"] * g[weight] for g in r["groups"]) for r in results]
+            return sum(t * r[field] for t, r in zip(totals, results)) / sum(totals)
+        final = national("dem_share", "turnout")
+        self.assertAlmostEqual(final, detail["final_two_party_d"], places=6)
+        self.assertAlmostEqual(200 * final - 100, 100 * (2 * .55 - 1) + detail["turnout_effect_margin_pp"] + detail["news_effect_margin_pp"], places=6)
+        # Favorable group coverage raises the national result above the target.
+        self.assertGreater(detail["news_effect_margin_pp"], 0)
 
     def test_group_coverage_scoring(self):
         from electiondb.news import group_features
@@ -133,22 +152,16 @@ class ForecastTests(unittest.TestCase):
         neutral = group_features("A barber shop event sparks civic engagement for Black voters")["black"]
         self.assertIsNone(neutral["direction"])
         self.assertNotIn("hispanic", group_features("The ice storm closed roads"))
-
-    def test_swing_is_bounded_and_sparse_news_has_less_influence(self):
-        extreme = {**self.news, "difference": 1000, "topics": {"economy": 1000},
-                   "topic_salience": {"economy": 1}, "attributed_article_count": 1_000_000}
-        swing, _, _ = demographic_swing("white_non_hispanic", "female", EDUCATION[0], extreme)
-        self.assertLessEqual(abs(swing), 12)
-        sparse_news = {**self.news, "attributed_article_count": 1}
-        small, _, _ = demographic_swing("white_non_hispanic", "female", EDUCATION[0], sparse_news)
-        strong, _, _ = demographic_swing("white_non_hispanic", "female", EDUCATION[0], self.news)
-        self.assertLess(small, strong)
+        # The referendum rule counts negative policy coverage against the White House party.
+        raids = "ICE raids spark fear and anger in immigrant neighborhoods"
+        self.assertGreater(group_features(raids, "republican")["hispanic"]["direction"], 0)
+        self.assertLess(group_features(raids, "democratic")["hispanic"]["direction"], 0)
 
     def test_local_model_changes_district_baseline(self):
         self.add_population("cd:0602")
         second_race = {**self.race, "geography_id": "cd:0602"}
-        first = predict_race(self.conn, self.race, model=self.model, signals=self.empty_news)
-        second = predict_race(self.conn, second_race, model=self.model, signals=self.empty_news)
+        first = self.predict()
+        second = self.predict(second_race)
         self.assertGreater(second["baseline_dem_share"], first["baseline_dem_share"])
 
     def test_logistic_fit_recovers_weighted_choices(self):
@@ -163,7 +176,7 @@ class ForecastTests(unittest.TestCase):
 
     def test_future_cutoff_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "precede"):
-            predict_race(self.conn, self.race, as_of="2026-11-03", model=self.model, signals=self.news)
+            predict_race(self.conn, self.race, as_of="2026-11-03", model=self.model, signals=self.news, swing_pp=0)
 
     def test_ratings_use_two_party_margin(self):
         self.assertEqual(_rating(1.9), "tossup")

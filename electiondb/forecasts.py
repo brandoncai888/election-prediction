@@ -22,7 +22,8 @@ def save_predictions(conn, payload):
         total=sum(float(g.get('population') or 0) for g in groups)
         for g in groups:
             population=float(g.get('population') or 0)
-            weight=population/total if total else 0
+            # Forecasts carry expected-voter weights; older payloads fall back to population.
+            weight=g['weight'] if 'weight' in g else population/total if total else 0
             group_rows.append((race_id,as_of,g['race_group'],g['sex'],g['education'],population,weight,
                 g['baseline_dem_share'],g['projected_dem_share'],g['swing_pp'],version,json.dumps(g,allow_nan=False)))
     with conn:
@@ -55,7 +56,7 @@ def forecast_overview(conn,as_of,office=None):
                 'election_type','baseline_dem_share','dem_share','rep_share','winner','margin_pp',
                 'swing_pp','rating','status','population','news_article_count','boundary_status',
                 'baseline_margin_pp','news_margin_shift_pp','win_probability_d','win_probability_r',
-                'win_probability_d_without_news','sigma_margin_pp'}
+                'win_probability_d_without_news','sigma_margin_pp','environment_shift_pp','turnout_shift_pp'}
         anchor=result.get('anchor') or {}
         result={key:value for key,value in result.items() if key in fields}
         result['district_redrawn_for_2026']=bool(anchor.get('district_redrawn_for_2026'))
@@ -129,8 +130,8 @@ def sensitivity(conn,race,as_of,coefficient_pp=0.0,assumed_shift_pp=0.0):
 
 
 TABLE_COLUMNS=('race_id','office','state','label','rating','win_probability_d','win_probability_r','margin_pp',
-               'dem_share','rep_share','baseline_margin_pp','news_margin_shift_pp','win_probability_d_without_news',
-               'district_redrawn_for_2026')
+               'dem_share','rep_share','baseline_margin_pp','environment_shift_pp','turnout_shift_pp',
+               'news_margin_shift_pp','win_probability_d_without_news','district_redrawn_for_2026')
 
 
 def forecast_table(conn,as_of,office=None):
@@ -139,6 +140,53 @@ def forecast_table(conn,as_of,office=None):
     rows=forecast_overview(conn,as_of,office)['races']
     rows.sort(key=lambda r:(order.get(r['office'],3),r['state'],str(r.get('district') or '')))
     return [{k:r.get(k) for k in TABLE_COLUMNS} for r in rows]
+
+
+BJC_COLUMNS=('race_id','chamber','predicted_winner_party','candidate_name','win_probability')
+PARTY_NAMES={'D':'Democratic','R':'Republican'}
+
+
+def _bjc_id(race):
+    if race['office']=='senate':
+        return f"{race['state']}-SEN"
+    district=str(race.get('district') or '00').zfill(2)
+    return f"{race['state']}-{'AL' if district=='00' else district}"
+
+
+def write_bjc_prediction(conn,as_of,path):
+    """Fill the House/Senate submission sheet: winner party and its win probability.
+
+    Rows keep the file's existing order, and any candidate names already typed
+    in are preserved; the database has no candidate roster to fill them.
+    """
+    import csv
+    from pathlib import Path
+    path=Path(path)
+    existing=[]
+    if path.exists():
+        with open(path,encoding='utf-8-sig',newline='') as stream:
+            existing=list(csv.DictReader(stream))
+    races={}
+    for race in forecast_overview(conn,as_of)['races']:
+        if race['office'] in ('house','senate'):
+            races[_bjc_id(race)]=race
+    order=[row['race_id'] for row in existing] or sorted(races)
+    names={row['race_id']:row.get('candidate_name','') for row in existing}
+    missing=[race_id for race_id in order if race_id not in races]
+    if missing:
+        raise ValueError(f'{path.name} lists races with no saved forecast: {", ".join(missing[:5])}')
+    with open(path,'w',newline='',encoding='utf-8') as stream:
+        writer=csv.DictWriter(stream,fieldnames=BJC_COLUMNS)
+        writer.writeheader()
+        for race_id in order:
+            race=races[race_id]
+            probability=race.get('win_probability_d')
+            winner=race.get('winner')
+            writer.writerow({'race_id':race_id,'chamber':race['office'].title(),
+                'predicted_winner_party':PARTY_NAMES.get(winner,''),'candidate_name':names.get(race_id,''),
+                'win_probability':'' if probability is None or winner not in PARTY_NAMES else
+                    round(probability if winner=='D' else 1-probability,4)})
+    return {'path':str(path),'rows':len(order)}
 
 
 def write_forecast_table(conn,as_of,path):

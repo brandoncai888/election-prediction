@@ -1,0 +1,126 @@
+{
+  "source": "CES cumulative 2006-2024 v10 validated turnout (citizens 25+); House popular vote from Wikipedia election infoboxes",
+  "built_at": "2026-10-21T21:29:13+00:00",
+  "house_two_party_d": {
+    "2006": 0.541444,
+    "2008": 0.555276,
+    "2010": 0.465102,
+    "2012": 0.505776,
+    "2014": 0.470564,
+    "2016": 0.494546,
+    "2018": 0.54357,
+    "2020": 0.515563,
+    "2022": 0.486032,
+    "2024": 0.486826
+  },
+  "midterms": [
+    {
+      "year": 2010,
+      "president_party": "D",
+      "out_party_gain_pp": 9.0174
+    },
+    {
+      "year": 2014,
+      "president_party": "D",
+      "out_party_gain_pp": 3.5212
+    },
+    {
+      "year": 2018,
+      "president_party": "R",
+      "out_party_gain_pp": 4.9024
+    },
+    {
+      "year": 2022,
+      "president_party": "D",
+      "out_party_gain_pp": 2.9531
+    }
+  ],
+  "mean_out_party_gain_pp": 5.098525,
+  "turnout_method": "Turnout relative to the CES national rate. Presidential weights use 2020; midterm weights average 2018, 2022.",
+  "turnout_rel": {
+    "asian|female|high_school_or_less": {
+      "presidential": 0.51315,
+      "midterm": 0.42696
+    },
+    "asian|female|some_college_or_more": {
+      "presidential": 0.89354,
+      "midterm": 0.9653749999999999
+    },
+    "asian|male|high_school_or_less": {
+      "presidential": 0.42361,
+      "midterm": 0.5262
+    },
+    "asian|male|some_college_or_more": {
+      "presidential": 0.97719,
+      "midterm": 0.971105
+    },
+    "black|female|high_school_or_less": {
+      "presidential": 0.74205,
+      "midterm": 0.696585
+    },
+    "black|female|some_college_or_more": {
+      "presidential": 0.9697,
+      "midterm": 0.916685
+    },
+    "black|male|high_school_or_less": {
+      "presidential": 0.69099,
+      "midterm": 0.55786
+    },
+    "black|male|some_college_or_more": {
+      "presidential": 0.89791,
+      "midterm": 0.837025
+    },
+    "hispanic|female|high_school_or_less": {
+      "presidential": 0.7006,
+      "midterm": 0.592775
+    },
+    "hispanic|female|some_college_or_more": {
+      "presidential": 0.8926,
+      "midterm": 0.87769
+    },
+    "hispanic|male|high_school_or_less": {
+      "presidential": 0.69241,
+      "midterm": 0.5607599999999999
+    },
+    "hispanic|male|some_college_or_more": {
+      "presidential": 0.84254,
+      "midterm": 0.863935
+    },
+    "other|female|high_school_or_less": {
+      "presidential": 0.61887,
+      "midterm": 0.5743750000000001
+    },
+    "other|female|some_college_or_more": {
+      "presidential": 1.0306,
+      "midterm": 1.0083199999999999
+    },
+    "other|male|high_school_or_less": {
+      "presidential": 0.50564,
+      "midterm": 0.63855
+    },
+    "other|male|some_college_or_more": {
+      "presidential": 1.0464,
+      "midterm": 1.056675
+    },
+    "white|female|high_school_or_less": {
+      "presidential": 0.8492,
+      "midterm": 0.84416
+    },
+    "white|female|some_college_or_more": {
+      "presidential": 1.1819,
+      "midterm": 1.2199
+    },
+    "white|male|high_school_or_less": {
+      "presidential": 0.84495,
+      "midterm": 0.82677
+    },
+    "white|male|some_college_or_more": {
+      "presidential": 1.2011,
+      "midterm": 1.2300499999999999
+    }
+  },
+  "inputs_sha256": {
+    "national_verification.csv": "18e02a7eb058a854728c9b26be56d4186e4ab07c5864bd86f815134d950bc711",
+    "turnout.csv": "ec2de673f95c753f93d1f13ee550303d32499a83dce005b6e79b077410db308e"
+  }
+}

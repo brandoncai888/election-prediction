@@ -1,7 +1,9 @@
-"""Population-standardized 2026 predictions with fitted 2024 survey baselines.
+"""2026 race predictions from fitted 2024 cohort baselines.
 
-The baseline is estimated; the news response is an explicit sensitivity prior.
-Those are deliberately kept separate in every returned prediction.
+Each cohort's 2024 baseline is shifted by (1) a common national swing that
+makes all House districts add up to the polls/midterm-history target and (2) a
+group news effect fitted to past midterms. Cohorts are weighted by expected
+midterm turnout. Every returned prediction itemizes these parts separately.
 """
 from __future__ import annotations
 
@@ -22,18 +24,19 @@ from .db import ROOT, utc_now
 from .races import STATES
 
 MODEL_VERSION = "2026-population-news-v1"  # fitted survey artifact
-FORECAST_VERSION = "2026-anchored-news-v2"  # race forecasts built on the artifact
+FORECAST_VERSION = "2026-polls-turnout-groupnews-v3"  # race forecasts built on the artifact
 # Margin uncertainty in two-party percentage points (D minus R).
 # race_sd: robust SD of Senate margin minus same-state presidential margin,
 # MEDSL 1976-2024 data, 2010-2024 contests (8.0 all states; 6.1 within 20 pts).
 # House uses the Senate value until district House results are imported;
 # governor races decouple more from presidential partisanship (assumption).
-# national_sd: shared error in the news-predicted national environment. The
-# spread of midterm national swings 2010-2022 around their mean is ~4-5 pts.
+# national_sd: shared error in the national environment. Out-party midterm
+# gains 2010-2022 spread ~2.8 share pts (5.5 margin) around their mean; the
+# poll half of the target is assumed no worse, so 5 margin pts is retained.
 UNCERTAINTY = {"national_sd_margin_pp": 5.0,
                "race_sd_margin_pp": {"house": 7.0, "senate": 7.0, "governor": 9.0},
                "simulations": 20000, "seed": 2026,
-               "basis": "Race SD: robust spread of Senate-minus-presidential margins, MEDSL 2010-2024 (House shares the Senate value; governor widened by assumption). National SD: assumed error of the news-implied national environment."}
+               "basis": "Race SD: robust spread of Senate-minus-presidential margins, MEDSL 2010-2024 (House shares the Senate value; governor widened by assumption). National SD: spread of out-party midterm gains 2010-2022, retained for the poll-blended target."}
 # Win-probability tiers modeled on 270toWin's Safe/Likely/Lean/Tilt/Toss-up.
 RATING_TIERS = ((0.95, "safe"), (0.85, "likely"), (0.65, "lean"), (0.55, "tilt"))
 DEFAULT_ARTIFACT = ROOT / "data" / "model" / "forecast2026.json"
@@ -60,12 +63,12 @@ TOPIC_SENSITIVITY = {
     "crime": {"high_school_or_less": 1.15},
     "foreign_policy": {}, "education": {"some_college_or_more": 1.15},
     "climate": {"some_college_or_more": 1.2},
-}
+}  # recorded in the fitted artifact; no longer used by the forecast
 LIMITATIONS = [
-    "Experimental population-standardized two-party forecast, not a calibrated election probability.",
-    "ACS counts are residents age 25+, including noncitizens; equal turnout is assumed. Voters age 18-24 are absent.",
+    "Experimental two-party forecast. Win probabilities use historical error widths and have not been backtested.",
+    "ACS counts are residents age 25+, including noncitizens, weighted by CES validated turnout by race, sex and education. Voters age 18-24 are absent.",
     "2024 CES v10 uses pre-election survey weights because post-wave weights and validated votes are unavailable in this cached release.",
-    "News-to-vote coefficients and demographic issue sensitivities are explicit assumptions, not effects learned from historical elections.",
+    "The national environment is half the average out-party midterm gain (four midterms) and half the generic-ballot average. The group news coefficient is fitted to ten group-midterm observations and is imprecise.",
     "Nonwhite Hispanic populations are allocated proportionally within sex and education; that race/ethnicity bridge is estimated, not an observed intersection.",
     "House geography uses ACS 119th-Congress district proxies; 2026 redistricting has not been reconciled.",
     "Candidate identity, incumbency, campaign spending, differential turnout, third parties, and election-specific uncertainty are not modeled.",
@@ -338,72 +341,66 @@ def population_cells(conn, geography_id):
                     "ethnicity_bridge": "Observed C15002H White non-Hispanic and C15002I Hispanic; nonwhite Hispanics allocated proportionally among B-G within sex and education. Total A-G population conserved."}
 
 
-# News -> vote-share scales (percentage points of two-party share).
-# national: a fully one-sided national news environment with strong evidence
-#   moves the nation 5 pts, about the mean absolute midterm House swing
-#   2010-2022 (-9.0, -3.5, +4.9, -3.0).
-# group: coverage of one racial group that is fully more favorable to a party
-#   than the overall environment moves that group 6 pts beyond the national
-#   swing, about two-thirds of the largest group-specific midterm deviation in
-#   CES (Hispanic voters, 2020->2022: ~9 pts beyond the nation).
-NEWS_RESPONSE = {"national_scale_pp": 5.0, "group_scale_pp": 6.0, "national_evidence_half": 10.0,
-                 "group_evidence_half": 8.0, "cap_pp": 12.0,
-                 "group_signal": "group coverage direction minus overall party direction (deviation from the national environment)",
-                 "national_distribution": "CES 2016->2018 cell response ratios (data/model/demographic_elasticity.json), normalized so the national population-weighted shift equals the national swing"}
+# Racial-group news: the learned coefficient (data/model/news_effect.json) x
+# group signal x n/(n+8), added on top of the polls/prior baseline. It is not
+# centered, so net favorable coverage moves the national result too.
 CELL_NEWS_GROUP = {"hispanic": "hispanic", "black_non_hispanic": "black", "asian_non_hispanic": "asian",
                    "white_non_hispanic": "white", "american_indian_alaska_native_non_hispanic": "native"}
 
 
 def national_ratio_scale(conn):
-    """k such that sum(national population share x k x cell ratio) = 1."""
+    """k such that the midterm-voter-weighted national cell ratio x k = 1."""
     from .elasticity import cell_ratio
+    from .environment import turnout_weight
     cells, coverage = population_cells(conn, "us")
     if not cells:
         return 1.0
-    total = sum(c["population"] for c in cells)
-    weighted = sum(c["population"] / total * cell_ratio(c["race_group"], c["sex"], c["education"]) for c in cells)
+    weights = [c["population"] * turnout_weight(c["race_group"], c["sex"], c["education"], "midterm") for c in cells]
+    weighted = sum(w * cell_ratio(c["race_group"], c["sex"], c["education"]) for w, c in zip(weights, cells)) / sum(weights)
     return 1.0 / weighted if weighted > 0 else 1.0
 
 
-def demographic_swing(race_group, sex, education, signals, national_k=1.0):
-    """National swing x measured group responsiveness + racial-group news, in pp."""
-    from .elasticity import cell_ratio
-    race = _survey_race(race_group)
-    difference = signals.get("difference")
-    attributed = signals.get("attributed_article_count", 0) or 0
-    strength = attributed / (attributed + NEWS_RESPONSE["national_evidence_half"])
-    drivers = []
-    if difference is not None:
-        national_pp = NEWS_RESPONSE["national_scale_pp"] * float(np.clip(difference, -1, 1)) * strength
-        ratio = cell_ratio(race_group, sex, education)
-        drivers.append({"issue": "national_environment", "signal": difference, "national_swing_pp": national_pp,
-                        "response_ratio": ratio, "normalizer": national_k,
-                        "contribution_pp": national_pp * ratio * national_k})
+def group_news_pp(race_group, signals, effect=None):
+    """Uncentered group news shift (pp of D share) and its driver record."""
+    from .newseffect import evidence, load_news_effect
+    effect = effect if effect is not None else load_news_effect()
     group = CELL_NEWS_GROUP.get(race_group)
     item = (signals.get("groups") or {}).get(group) if group else None
-    if item and item.get("signal") is not None:
-        n = item.get("articles", 0) or 0
-        group_strength = n / (n + NEWS_RESPONSE["group_evidence_half"])
-        deviation = float(np.clip(item["signal"] - (difference or 0.0), -1, 1))
-        drivers.append({"issue": f"group_news:{group}", "signal": item["signal"], "deviation_from_national": deviation,
-                        "articles": n, "evidence_strength": group_strength,
-                        "contribution_pp": NEWS_RESPONSE["group_scale_pp"] * deviation * group_strength})
-    topics = signals.get("topics") or {}
-    salience = signals.get("topic_salience") or {}
-    usable = [(k, float(v), max(0.0, float(salience.get(k, 0)))) for k, v in topics.items()
-              if k in TOPIC_SENSITIVITY and v is not None and math.isfinite(float(v))]
-    total_salience = sum(weight for _, _, weight in usable)
-    for issue, signal, weight in usable:
-        if not total_salience or not weight:
-            continue
-        priors = TOPIC_SENSITIVITY[issue]
-        sensitivity = float(np.clip(priors.get(race, 1.0) * priors.get(sex, 1.0) * priors.get(education, 1.0), .6, 1.5))
-        contribution = 3.0 * float(np.clip(signal, -1, 1)) * weight / total_salience * sensitivity * strength
-        drivers.append({"issue": issue, "signal": signal, "salience": weight,
-                        "sensitivity_prior": sensitivity, "contribution_pp": contribution})
-    cap = NEWS_RESPONSE["cap_pp"]
-    swing = float(np.clip(sum(d["contribution_pp"] for d in drivers), -cap, cap))
-    return swing, drivers, strength
+    strength = evidence(item)
+    if not effect or strength is None:
+        return 0.0, None
+    beta = effect["coefficient_pp_per_unit"]
+    value = float(np.clip(beta * strength, -effect["cap_pp"], effect["cap_pp"]))
+    return value, {"issue": f"group_news:{group}", "signal": item["signal"], "articles": item.get("articles", 0),
+                   "evidence": strength, "coefficient_pp_per_unit": beta, "raw_pp": value}
+
+
+def solve_national_swing(house_inputs, target):
+    """National swing x (pp, before cell ratios) so House districts hit the baseline target.
+
+    The target is met by the environment alone, on the 2024 electorate.
+    Midterm turnout and group news are then layered on top and move the
+    final national result. Returns (x, news center = 0, national detail).
+    """
+    rows = [item for item in house_inputs if item.get("cells")]
+    if not rows:
+        raise ValueError("National swing needs House races with population data")
+    presidential = np.concatenate([item["w_pres"] for item in rows])
+    voters = np.concatenate([item["w_mid"] for item in rows])
+    base = np.concatenate([item["baseline"] for item in rows])
+    ratio = np.concatenate([item["ratio"] for item in rows])
+    news = np.concatenate([item["news"] for item in rows])
+    def share(x, weights=presidential, extra=0.0):
+        return float(np.dot(weights, np.clip(base + (ratio * x + extra) / 100, 0, 1)) / weights.sum())
+    swing = brentq(lambda x: share(x) - target, -60, 60)
+    with_turnout = share(swing, voters)
+    final = share(swing, voters, news)
+    return swing, 0.0, {"house_baseline_two_party_d_2024_turnout": float(np.dot(presidential, base) / presidential.sum()),
+                        "house_baseline_two_party_d_midterm_turnout": float(np.dot(voters, base) / voters.sum()),
+                        "turnout_effect_margin_pp": 200 * (with_turnout - target),
+                        "news_effect_margin_pp": 200 * (final - with_turnout),
+                        "final_two_party_d": final, "final_margin_pp": 100 * (2 * final - 1),
+                        "house_districts": len(rows)}
 
 
 def _rating(margin, probability=None):
@@ -436,14 +433,17 @@ def _anchor_offset(eta, weights, target):
     return brentq(lambda delta: float(np.dot(weights, expit(eta + delta))) - target, -15, 15)
 
 
-def predict_race(conn, race, *, as_of="2026-10-21", model=None, signals=None,
-                 cache_dir=ROOT / "data" / "cache", artifact_path=DEFAULT_ARTIFACT, national_k=None):
+def race_inputs(conn, race, *, as_of="2026-10-21", model, signals=None, national_k=1.0, effect=None):
+    """Everything about one race that does not depend on the national swing."""
+    from .elasticity import cell_ratio
+    from .environment import turnout_weight
+    from .newseffect import load_news_effect
     race = dict(race)
     if date.fromisoformat(as_of) >= date.fromisoformat(race["election_date"]):
         raise ValueError("Prediction cutoff must precede the election date")
     if date.fromisoformat(as_of).year <= 2024:
         raise ValueError("Prediction cutoff must follow the 2024 training election")
-    model = model if model is not None else load_model(conn, cache_dir, artifact_path)
+    effect = effect if effect is not None else load_news_effect()
     if signals is None:
         from .news import news_signals
         signals = news_signals(conn, race, as_of=as_of)
@@ -453,66 +453,127 @@ def predict_race(conn, race, *, as_of="2026-10-21", model=None, signals=None,
     if "articles" in signals:
         feature_summary["article_ids"] = [r["news_id"] for r in signals["articles"] if r.get("news_id")]
     cells, coverage = population_cells(conn, race["geography_id"])
-    national_k = national_ratio_scale(conn) if national_k is None else national_k
     result = {**race, "as_of": as_of, "baseline_year": 2024, "model_version": MODEL_VERSION,
               "status": "experimental_forecast", "dem_share": None, "rep_share": None,
               "winner": None, "margin_pp": None, "rating": "unavailable", "groups": [],
               "news_feature": feature_summary, "population_coverage": coverage,
               "news_article_count": signals.get("article_count", 0),
               "validation": model["validation"], "limitations": LIMITATIONS,
-              "news_coefficient_status": "assumed_prior_not_historically_fitted",
-              "prediction_kind": "population_standardized_two_party_share",
+              "news_coefficient_status": "fitted_to_2010_2022_midterms" if effect else "no_news_effect_artifact",
+              "prediction_kind": "turnout_weighted_two_party_share",
               "boundary_status": "119th_congress_proxy_unreconciled" if race["office"] == "house" else "statewide"}
     if not cells:
         result.update(status="missing_population", message=coverage["message"])
-        return result
+        return {"result": result, "cells": None}
     rows = [{**g, "state_fips": race["state_fips"], "geography_id": race["geography_id"], "office": race["office"]} for g in cells]
     eta = _matrix(rows, model["features"]) @ np.asarray(model["coefficients"])
-    total = coverage["population_25_plus"]
-    weights = np.asarray([c["population"] / total for c in cells])
+    population = np.asarray([c["population"] for c in cells])
+    turnout = {kind: np.asarray([turnout_weight(c["race_group"], c["sex"], c["education"], kind) for c in cells])
+               for kind in ("presidential", "midterm")}
+    w_pres, w_mid = population * turnout["presidential"], population * turnout["midterm"]
     survey_baseline = expit(eta)
     from .anchors import anchor_share
     target, anchor = anchor_share(conn, race)
     if target is not None:
         # Keep the survey's differences between cohorts, but shift every cohort
-        # by one common logit offset so the district/state matches 2024 reality.
-        anchor["logit_offset"] = _anchor_offset(eta, weights, target)
+        # by one common logit offset so the 2024 electorate matches 2024 reality.
+        anchor["logit_offset"] = _anchor_offset(eta, w_pres / w_pres.sum(), target)
         anchor["actual_dem_share"] = target
-        anchor["survey_only_dem_share"] = float(np.dot(weights, survey_baseline))
+        anchor["survey_only_dem_share"] = float(np.dot(w_pres / w_pres.sum(), survey_baseline))
         baseline = expit(eta + anchor["logit_offset"])
     else:
         baseline = survey_baseline
     result["anchor"] = anchor
-    groups, weighted_drivers = [], {}
-    for cell, base, survey in zip(cells, baseline, survey_baseline):
-        swing, drivers, strength = demographic_swing(cell["race_group"], cell["sex"], cell["education"], signals, national_k)
-        projected = float(np.clip(base + swing / 100, 0.0, 1.0))
-        weight = cell["population"] / total
-        for driver in drivers:
-            key = "group_news" if driver["issue"].startswith("group_news:") else driver["issue"]
-            weighted_drivers[key] = weighted_drivers.get(key, 0) + weight * driver["contribution_pp"]
-        groups.append({**cell, "baseline_dem_share": float(base), "survey_baseline_dem_share": float(survey),
-                       "projected_dem_share": projected,
-                       "projected_rep_share": 1 - projected, "swing_pp": 100 * (projected - base),
-                       "weight": weight, "turnout": 1.0, "model_status": "regularized_estimate_plus_assumed_news_response",
-                       "baseline_geography": race["geography_id"], "race_scheme": "modeled_hispanic_exclusive",
-                       "news_evidence_strength": strength, "drivers": drivers})
-    base_share = sum(g["weight"] * g["baseline_dem_share"] for g in groups)
-    share = sum(g["weight"] * g["projected_dem_share"] for g in groups)
-    margin = 100 * (2 * share - 1)
-    baseline_margin = 100 * (2 * base_share - 1)
-    probability = win_probability(margin, race["office"])
-    result.update(groups=groups, baseline_dem_share=base_share, dem_share=share, rep_share=1 - share,
-                  swing_pp=100 * (share - base_share), margin_pp=margin, baseline_margin_pp=baseline_margin,
-                  news_margin_shift_pp=margin - baseline_margin,
+    news, news_drivers = zip(*(group_news_pp(c["race_group"], signals, effect) for c in cells))
+    return {"result": result, "cells": cells, "baseline": baseline, "survey": survey_baseline,
+            "w_pres": w_pres, "w_mid": w_mid, "turnout": turnout,
+            "ratio": np.asarray([cell_ratio(c["race_group"], c["sex"], c["education"]) * national_k for c in cells]),
+            "news": np.asarray(news), "news_drivers": list(news_drivers),
+            "news_active": any(news_drivers)}
+
+
+def finish_race(inputs, swing_pp, news_center_pp=0.0, environment=None):
+    """Apply the national swing, then turnout and group news on top; itemize the change.
+
+    Margin change from 2024 = turnout (2024 -> midterm electorate)
+    + national environment (swing x cell ratios) + group news.
+    """
+    result = inputs["result"]
+    if not inputs["cells"]:
+        return result
+    base, ratio = inputs["baseline"], inputs["ratio"]
+    environment_pp = ratio * swing_pp
+    news_pp = inputs["news"] - news_center_pp
+    without_news = np.clip(base + environment_pp / 100, 0, 1)
+    projected = np.clip(base + (environment_pp + news_pp) / 100, 0, 1)
+    w_pres, w_mid = inputs["w_pres"] / inputs["w_pres"].sum(), inputs["w_mid"] / inputs["w_mid"].sum()
+    base_2024 = float(np.dot(w_pres, base))
+    base_midterm = float(np.dot(w_mid, base))
+    share_without_news = float(np.dot(w_mid, without_news))
+    share = float(np.dot(w_mid, projected))
+    groups = []
+    for i, cell in enumerate(inputs["cells"]):
+        drivers = [{"issue": "national_environment", "national_swing_pp": swing_pp, "response_ratio": float(ratio[i]),
+                    "contribution_pp": float(environment_pp[i])}]
+        if inputs["news_drivers"][i]:
+            drivers.append({**inputs["news_drivers"][i], "national_mean_pp": news_center_pp, "contribution_pp": float(news_pp[i])})
+        groups.append({**cell, "baseline_dem_share": float(base[i]), "survey_baseline_dem_share": float(inputs["survey"][i]),
+                       "projected_dem_share": float(projected[i]), "projected_rep_share": float(1 - projected[i]),
+                       "swing_pp": float(100 * (projected[i] - base[i])), "weight": float(w_mid[i]),
+                       "weight_2024": float(w_pres[i]), "turnout": float(inputs["turnout"]["midterm"][i]),
+                       "turnout_2024": float(inputs["turnout"]["presidential"][i]),
+                       "model_status": "regularized_estimate_plus_environment_and_group_news",
+                       "baseline_geography": result["geography_id"], "race_scheme": "modeled_hispanic_exclusive",
+                       "drivers": drivers})
+    margin, baseline_margin = 100 * (2 * share - 1), 100 * (2 * base_2024 - 1)
+    turnout_shift = 200 * (base_midterm - base_2024)
+    environment_shift = 200 * (share_without_news - base_midterm)
+    news_shift = 200 * (share - share_without_news)
+    office = result["office"]
+    probability = win_probability(margin, office)
+    result.update(groups=groups, baseline_dem_share=base_2024, dem_share=share, rep_share=1 - share,
+                  swing_pp=100 * (share - base_2024), margin_pp=margin, baseline_margin_pp=baseline_margin,
+                  turnout_shift_pp=turnout_shift, environment_shift_pp=environment_shift, news_margin_shift_pp=news_shift,
                   win_probability_d=probability, win_probability_r=1 - probability,
-                  win_probability_d_without_news=win_probability(baseline_margin, race["office"]),
-                  sigma_margin_pp=_sigma(race["office"]), model_version=FORECAST_VERSION,
+                  win_probability_d_without_news=win_probability(margin - news_shift, office),
+                  sigma_margin_pp=_sigma(office), model_version=FORECAST_VERSION,
                   winner="D" if share > .5 else "R" if share < .5 else "Tie", rating=_rating(margin, probability),
-                  drivers=[{"issue": issue, "contribution_pp": value} for issue, value in sorted(weighted_drivers.items(), key=lambda item: -abs(item[1]))],
-                  news_status="active" if (signals.get("attributed_article_count", 0) or 0) > 0 else "no_attributed_news_baseline_only",
-                  message="Cohort baselines anchored to the actual 2024 presidential result, shifted by news-derived demographic changes, then population-weighted. Win probability = Phi(margin / sigma) with sigma from historical race deviations and national-environment uncertainty.")
+                  national_environment=environment or {"national_swing_pp": swing_pp, "news_center_pp": news_center_pp},
+                  drivers=[{"issue": issue, "contribution_pp": value / 2} for issue, value in
+                           (("national_environment", environment_shift), ("turnout", turnout_shift), ("group_news", news_shift))],
+                  news_status="active" if inputs["news_active"] else "no_group_news",
+                  message="2024 cohort baselines anchored to the actual 2024 presidential result, reweighted to the expected midterm electorate, shifted by the national environment (half typical out-party midterm gain, half generic-ballot polls) and by learned group news effects, then combined by expected voters. Win probability = Phi(margin / sigma).")
     return result
+
+
+def predict_race(conn, race, *, as_of="2026-10-21", model=None, signals=None,
+                 cache_dir=ROOT / "data" / "cache", artifact_path=DEFAULT_ARTIFACT, national_k=None,
+                 swing_pp=None, news_center_pp=0.0):
+    """One race. Without ``swing_pp`` the national swing is solved from every House race."""
+    model = model if model is not None else load_model(conn, cache_dir, artifact_path)
+    national_k = national_ratio_scale(conn) if national_k is None else national_k
+    environment = None
+    if swing_pp is None:
+        environment = national_solution(conn, as_of=as_of, model=model, national_k=national_k)
+        swing_pp, news_center_pp = environment["national_swing_pp"], environment["news_center_pp"]
+    inputs = race_inputs(conn, race, as_of=as_of, model=model, signals=signals, national_k=national_k)
+    return finish_race(inputs, swing_pp, news_center_pp, environment)
+
+
+def _race_rows(conn):
+    return conn.execute("SELECT * FROM races WHERE cycle=2026 ORDER BY office,state,district,race_id").fetchall()
+
+
+def national_solution(conn, *, as_of, model, national_k, inputs=None):
+    """National target from polls/history, and the swing that reaches it."""
+    from .environment import national_environment
+    environment = national_environment(conn, as_of)
+    if inputs is None:
+        inputs = [race_inputs(conn, race, as_of=as_of, model=model, national_k=national_k)
+                  for race in _race_rows(conn) if race["office"] == "house"]
+    swing, center, detail = solve_national_swing([i for i in inputs if i["result"]["office"] == "house"],
+                                                 environment["target_two_party_d"])
+    return {**environment, **detail, "national_swing_pp": swing, "news_center_pp": center}
 
 
 def simulate_chambers(races, simulations=None, seed=None):
@@ -556,9 +617,16 @@ def simulate_chambers(races, simulations=None, seed=None):
 
 def predict_all(conn, *, as_of="2026-10-21", cache_dir=ROOT / "data" / "cache", artifact_path=DEFAULT_ARTIFACT,
                 model=None):
+    from .environment import load_midterm_inputs
+    from .newseffect import load_news_effect
     model = model if model is not None else load_model(conn, cache_dir, artifact_path)
     national_k = national_ratio_scale(conn)
-    races = [predict_race(conn, race, as_of=as_of, model=model, national_k=national_k) for race in conn.execute("SELECT * FROM races WHERE cycle=2026 ORDER BY office,state,district,race_id").fetchall()]
+    inputs = [race_inputs(conn, race, as_of=as_of, model=model, national_k=national_k) for race in _race_rows(conn)]
+    environment = national_solution(conn, as_of=as_of, model=model, national_k=national_k, inputs=inputs)
+    summary = {k: environment[k] for k in ("target_two_party_d", "target_margin_pp", "status", "national_swing_pp",
+                                           "news_center_pp", "prior_two_party_d", "poll_two_party_d",
+                                           "turnout_effect_margin_pp", "news_effect_margin_pp", "final_two_party_d", "final_margin_pp")}
+    races = [finish_race(item, environment["national_swing_pp"], environment["news_center_pp"], summary) for item in inputs]
     counts = {}
     for race in races:
         # One shared validation object is retained at run level. Single-race
@@ -570,12 +638,21 @@ def predict_all(conn, *, as_of="2026-10-21", cache_dir=ROOT / "data" / "cache", 
     anchor_error = {office: float(np.sqrt(np.mean([(200 * (r["anchor"]["survey_only_dem_share"] - r["anchor"]["actual_dem_share"])) ** 2
                                                     for r in anchored if r["office"] == office])))
                     for office in ("house", "senate", "governor") if any(r["office"] == office for r in anchored)}
+    effect = load_news_effect()
+    house = [r for r in races if r["office"] == "house" and r.get("dem_share") is not None]
     return {"as_of": as_of, "status": "experimental_forecast", "races": races, "counts": counts, "validation": model["validation"],
-            "model": {**{k: model[k] for k in ("model_version", "trained_at", "baseline_year", "training", "news_response", "artifact_path")},
+            "model": {**{k: model[k] for k in ("model_version", "trained_at", "baseline_year", "training", "artifact_path")},
                       "forecast_version": FORECAST_VERSION, "status": "experimental_forecast",
-                      "news_response": {**NEWS_RESPONSE, "national_ratio_normalizer": national_k},
+                      "environment": environment,
+                      "news_response": {"coefficient_pp_per_unit": effect["coefficient_pp_per_unit"] if effect else 0.0,
+                                        "coefficient_se": effect["coefficient_se"] if effect else None,
+                                        "fit": effect["fit"] if effect else None,
+                                        "method": effect["method"] if effect else "No news_effect.json; group news disabled.",
+                                        "national_ratio_normalizer": national_k},
+                      "turnout": (load_midterm_inputs() or {}).get("turnout_method"),
                       "uncertainty": UNCERTAINTY, "chambers": simulate_chambers(races),
+                      "house_news_shift_check_pp": float(np.mean([r["news_margin_shift_pp"] for r in house])) if house else None,
                       "anchoring": {"races_anchored": len(anchored), "races_total": len(races),
                                     "survey_only_rmse_margin_pp_vs_actual_2024": anchor_error,
-                                    "method": "Per race, one logit offset added to every cohort so the population-weighted 2024 baseline equals the actual 2024 presidential two-party result (2026 district lines where redrawn)."}},
+                                    "method": "Per race, one logit offset added to every cohort so the 2024-turnout-weighted baseline equals the actual 2024 presidential two-party result (2026 district lines where redrawn)."}},
             "limitations": LIMITATIONS}

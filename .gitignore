@@ -7,3 +7,4 @@ data/*.sqlite-wal
 .env
 .dependencies/
 data/elections.sqlite
+update_webpage.txt
