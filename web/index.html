@@ -17,8 +17,16 @@
 
   <main id="main">
     <section class="intro" aria-labelledby="page-heading">
-      <div><p class="eyebrow"><span></span> THE 2026 MIDTERM FORECAST</p><h1 id="page-heading">Every seat.<br><em>A clearer picture.</em></h1><p class="intro-copy">Follow race-by-race projections built from 2024 voting patterns, local demographics, and the tone and content of current news.</p></div>
-      <div class="intro-aside"><div class="orbit" aria-hidden="true"><span></span><span></span><span></span><b>26</b></div><p>Population. Preferences. Possibilities.</p><span id="as-of">2026 election cycle</span></div>
+      <div class="intro-head"><h1 id="page-heading">2026 midterm forecast</h1><p class="intro-copy">Projections for all 435 House seats, 35 Senate contests and 36 governor races. <span id="as-of">2026 election cycle</span></p></div>
+      <h2 class="sr-only">How the forecast works</h2>
+      <ol class="method-steps">
+        <li><b>Who lives there.</b> Census data splits each state or district into 32 groups of adults 25+ by race/ethnicity, sex and education.</li>
+        <li><b>How they voted in 2024.</b> A penalized logistic model fitted to the 2024 Cooperative Election Study estimates each group's Democratic share, then shifts all groups together so each race matches its actual 2024 presidential result.</li>
+        <li><b>National environment.</b> The 2026 national House vote is half the average out-party midterm gain since 2010 and half the generic-ballot polling average. Groups that historically swing more in midterms move more.</li>
+        <li><b>Midterm turnout.</b> Groups are weighted by their validated 2018 and 2022 turnout rates, so each midterm electorate differs from its 2024 one.</li>
+        <li><b>Group news.</b> Recent coverage of specific racial groups and their issues shifts those groups further. The size of that effect is fitted to the 2010–2022 midterms.</li>
+        <li><b>Margin to odds.</b> Groups add up to a projected margin. Win probability is Φ(margin / σ), with σ combining race-level error (7 pts House and Senate, 9 governor) and 5 pts of national error. Chamber control comes from 20,000 simulations.</li>
+      </ol>
     </section>
 
     <div id="app-notice" class="notice error-notice" role="alert" hidden></div>
