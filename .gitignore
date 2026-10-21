@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.venv/
+data/cache/
+data/*.sqlite-shm
+data/*.sqlite-wal
+.env
+.dependencies/
+data/elections.sqlite

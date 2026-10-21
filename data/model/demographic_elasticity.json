@@ -1,0 +1,161 @@
+{
+  "source": "CES cumulative 2006-2024 v10 (Berkeley SDA), House two-party vote, age 25+",
+  "method": "Cell shift / national shift, 2016->2018 (Republican president midterm), empirical-Bayes shrinkage toward race-group ratio; race ratios toward 1.0.",
+  "summary_file": "midterm_ratio_summary.csv",
+  "summary_sha256": "792662d6182788ce25e0c9bd6fe959012770bd7dde70e686f75e23227889a4c9",
+  "built_at": "2026-10-21T19:35:28+00:00",
+  "cells": {
+    "asian|female|high_school_or_less": {
+      "ratio": 1.0325,
+      "se": 0.60016,
+      "ratio_2018_raw": 3.7895,
+      "pooled_4_midterms": 1.2202
+    },
+    "asian|female|some_college_or_more": {
+      "ratio": 0.9276,
+      "se": 0.5293,
+      "ratio_2018_raw": 0.70076,
+      "pooled_4_midterms": 0.81769
+    },
+    "asian|male|high_school_or_less": {
+      "ratio": 0.91692,
+      "se": 0.59697,
+      "ratio_2018_raw": -1.9178,
+      "pooled_4_midterms": 1.189
+    },
+    "asian|male|some_college_or_more": {
+      "ratio": 0.98472,
+      "se": 0.53105,
+      "ratio_2018_raw": 0.96886,
+      "pooled_4_midterms": 0.80434
+    },
+    "black|female|high_school_or_less": {
+      "ratio": 0.70519,
+      "se": 0.39133,
+      "ratio_2018_raw": 0.40243,
+      "pooled_4_midterms": 0.27126
+    },
+    "black|female|some_college_or_more": {
+      "ratio": 0.73843,
+      "se": 0.24314,
+      "ratio_2018_raw": 0.66683,
+      "pooled_4_midterms": 0.73689
+    },
+    "black|male|high_school_or_less": {
+      "ratio": 1.562,
+      "se": 0.50418,
+      "ratio_2018_raw": 3.058,
+      "pooled_4_midterms": 1.0152
+    },
+    "black|male|some_college_or_more": {
+      "ratio": 0.8777,
+      "se": 0.39799,
+      "ratio_2018_raw": 0.71396,
+      "pooled_4_midterms": 0.95576
+    },
+    "hispanic|female|high_school_or_less": {
+      "ratio": 0.70223,
+      "se": 0.54693,
+      "ratio_2018_raw": -0.86199,
+      "pooled_4_midterms": 1.1512
+    },
+    "hispanic|female|some_college_or_more": {
+      "ratio": 1.5415,
+      "se": 0.40782,
+      "ratio_2018_raw": 2.0807,
+      "pooled_4_midterms": 1.2015
+    },
+    "hispanic|male|high_school_or_less": {
+      "ratio": 1.0006,
+      "se": 0.54925,
+      "ratio_2018_raw": 1.0854,
+      "pooled_4_midterms": 1.8346
+    },
+    "hispanic|male|some_college_or_more": {
+      "ratio": 1.0519,
+      "se": 0.45172,
+      "ratio_2018_raw": 1.1492,
+      "pooled_4_midterms": 0.62489
+    },
+    "other|female|high_school_or_less": {
+      "ratio": 1.0287,
+      "se": 0.58538,
+      "ratio_2018_raw": -0.027914,
+      "pooled_4_midterms": 1.07
+    },
+    "other|female|some_college_or_more": {
+      "ratio": 1.0567,
+      "se": 0.49408,
+      "ratio_2018_raw": 0.9787,
+      "pooled_4_midterms": 0.9455
+    },
+    "other|male|high_school_or_less": {
+      "ratio": 1.2014,
+      "se": 0.58373,
+      "ratio_2018_raw": 2.9346,
+      "pooled_4_midterms": 3.2712
+    },
+    "other|male|some_college_or_more": {
+      "ratio": 1.46,
+      "se": 0.5113,
+      "ratio_2018_raw": 2.5189,
+      "pooled_4_midterms": 1.0274
+    },
+    "white|female|high_school_or_less": {
+      "ratio": 0.22789,
+      "se": 0.27273,
+      "ratio_2018_raw": 0.071604,
+      "pooled_4_midterms": 1.0454
+    },
+    "white|female|some_college_or_more": {
+      "ratio": 1.355,
+      "se": 0.18998,
+      "ratio_2018_raw": 1.4344,
+      "pooled_4_midterms": 0.67326
+    },
+    "white|male|high_school_or_less": {
+      "ratio": 0.094255,
+      "se": 0.32828,
+      "ratio_2018_raw": -0.23609,
+      "pooled_4_midterms": 0.8522
+    },
+    "white|male|some_college_or_more": {
+      "ratio": 0.16605,
+      "se": 0.18301,
+      "ratio_2018_raw": 0.098328,
+      "pooled_4_midterms": 0.73036
+    }
+  },
+  "races": {
+    "asian": {
+      "ratio": 0.98888,
+      "se": 0.22587,
+      "ratio_2018_raw": 0.87799,
+      "pooled_4_midterms": 0.97158
+    },
+    "black": {
+      "ratio": 1.0564,
+      "se": 0.1808,
+      "ratio_2018_raw": 1.1351,
+      "pooled_4_midterms": 0.9088
+    },
+    "hispanic": {
+      "ratio": 0.98603,
+      "se": 0.21113,
+      "ratio_2018_raw": 0.93215,
+      "pooled_4_midterms": 1.1615
+    },
+    "other": {
+      "ratio": 1.0907,
+      "se": 0.22325,
+      "ratio_2018_raw": 1.8087,
+      "pooled_4_midterms": 1.1773
+    },
+    "white": {
+      "ratio": 0.73784,
+      "se": 0.077831,
+      "ratio_2018_raw": 0.70613,
+      "pooled_4_midterms": 0.81469
+    }
+  }
+}
