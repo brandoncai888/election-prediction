@@ -37,6 +37,39 @@ def summary(conn,as_of=AS_OF):
             'sources':sources,'limitations':LIMITATIONS,'model':json.loads(metadata['model']) if metadata else {'status':'not_built'},
             'validation':json.loads(metadata['validation']) if metadata else {}}
 
+def groups_payload():
+    return {key:[{'value':k,'label':v} for k,v in values.items()]
+            for key,values in [('race_groups',MODEL_RACE_GROUPS),('sexes',SEXES),('education',COARSE_EDUCATION)]}
+
+def races_payload(conn,office='',state='',q=''):
+    where=[]
+    values=[]
+    for field,value in (('office',office),('state',state)):
+        if value:
+            where.append(f'{field}=?')
+            values.append(value)
+    if q:
+        where.append('(label LIKE ? OR race_id LIKE ?)')
+        values.extend(['%'+q+'%']*2)
+    query='SELECT * FROM races'+(' WHERE '+' AND '.join(where) if where else '')+' ORDER BY state,office,district,race_id'
+    return {'races':[dict(r) for r in conn.execute(query,values)]}
+
+def race_news(conn,race_id,as_of=AS_OF):
+    """Latest 80 articles for a race plus untargeted news; race_id=None gives untargeted only."""
+    from .news import ensure_news_schema
+    ensure_news_schema(conn)
+    news=[]
+    for raw in conn.execute('''SELECT n.*,a.compound,a.topics,a.coverage,a.explanation,
+        a.content,a.dem_tone,a.rep_tone,a.coverage_status,a.method AS analysis_method
+        FROM news_items n LEFT JOIN news_analysis a USING(news_id)
+        WHERE (n.race_id=? OR n.race_id IS NULL) AND date(n.published_at)<=?
+        ORDER BY n.published_at DESC LIMIT 80''',(race_id,as_of)):
+        item=dict(raw)
+        if isinstance(item.get('topics'),str):
+            item['topics']=json.loads(item['topics'])
+        news.append(item)
+    return news
+
 def race_detail(conn,race_id,as_of=AS_OF):
     raw=conn.execute('SELECT * FROM races WHERE race_id=?',(race_id,)).fetchone()
     if raw is None:
@@ -54,18 +87,7 @@ def race_detail(conn,race_id,as_of=AS_OF):
                              'moe':g.get('moe')})
     if not demographics:
         demographics=raw_demographics
-    from .news import ensure_news_schema
-    ensure_news_schema(conn)
-    news=[]
-    for raw in conn.execute('''SELECT n.*,a.compound,a.topics,a.coverage,a.explanation,
-        a.content,a.dem_tone,a.rep_tone,a.coverage_status,a.method AS analysis_method
-        FROM news_items n LEFT JOIN news_analysis a USING(news_id)
-        WHERE (n.race_id=? OR n.race_id IS NULL) AND date(n.published_at)<=?
-        ORDER BY n.published_at DESC LIMIT 80''',(race_id,as_of)):
-        item=dict(raw)
-        if isinstance(item.get('topics'),str):
-            item['topics']=json.loads(item['topics'])
-        news.append(item)
+    news=race_news(conn,race_id,as_of)
     history=historical_comparison(conn,race['geography_id'],race['office'])
     aliases={k:k+'_non_hispanic' for k in RACE_GROUPS}
     for h in history:
@@ -116,21 +138,9 @@ def serve(db_path,host='127.0.0.1',port=8000,as_of=AS_OF):
                         if parsed.path=='/api/summary':
                             payload=summary(conn,as_of)
                         elif parsed.path=='/api/groups':
-                            races=MODEL_RACE_GROUPS
-                            payload={key:[{'value':k,'label':v} for k,v in values.items()]
-                                     for key,values in [('race_groups',races),('sexes',SEXES),('education',COARSE_EDUCATION)]}
+                            payload=groups_payload()
                         elif parsed.path=='/api/races':
-                            where=[]
-                            values=[]
-                            for field in ('office','state'):
-                                if arg(field):
-                                    where.append(f'{field}=?')
-                                    values.append(arg(field))
-                            if arg('q'):
-                                where.append('(label LIKE ? OR race_id LIKE ?)')
-                                values.extend(['%'+arg('q')+'%']*2)
-                            query='SELECT * FROM races'+(' WHERE '+' AND '.join(where) if where else '')+' ORDER BY state,office,district,race_id'
-                            payload={'races':[dict(r) for r in conn.execute(query,values)]}
+                            payload=races_payload(conn,arg('office'),arg('state'),arg('q'))
                         elif parsed.path=='/api/race':
                             payload=race_detail(conn,arg('id'),arg('as_of',as_of))
                         elif parsed.path=='/api/predictions':

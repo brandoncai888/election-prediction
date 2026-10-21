@@ -49,6 +49,9 @@ def parser():
     projection.add_argument('--source-id',help='Use one explicit historical survey source')
     projection.add_argument('--coefficient-pp',type=float,default=0)
     projection.add_argument('--assumed-shift-pp',type=float,default=0)
+    site=subs.add_parser('export-site',help='Write the dashboard as static files for GitHub Pages')
+    site.add_argument('--out',type=Path,default=ROOT/'docs',help='Output folder (default: docs/)')
+    site.add_argument('--as-of',default='2026-10-21')
     server=subs.add_parser('serve',help='Start the local interactive dashboard (default)')
     server.add_argument('--host',default='127.0.0.1')
     server.add_argument('--port',type=int,default=8000)
@@ -136,6 +139,9 @@ def main(argv=None):
         elif args.command=='import-news':
             from electiondb.news import import_news
             result=import_news(conn,args.csv)
+        elif args.command=='export-site':
+            from electiondb.site import export_site
+            result=export_site(conn,args.out,as_of=args.as_of)
         elif args.command=='scenario':
             from electiondb.analysis import scenario
             row=conn.execute('SELECT * FROM races WHERE race_id=?',(args.race_id,)).fetchone()

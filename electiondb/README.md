@@ -69,6 +69,19 @@ Read-only endpoints served by `python main.py serve`:
 
 If port 8000 is busy, stop the other server or pass `--port 8001`.
 
+## Static site (GitHub Pages)
+
+`python main.py export-site` (`site.py`) writes the dashboard to `docs/` as plain files: the `web/` assets plus one JSON file per API response. The exported `index.html` has a `<meta name="election-static">` tag, which makes `app.js` read `data/*.json` instead of `/api/`.
+
+To keep the export near 60 MB, each race file is compacted:
+
+- The shared news list is stored once in `data/news.json`.
+- Cohort rows that repeat across keys are rebuilt in the browser (`expandDetail` in `web/app.js`).
+- The unused article ID list is dropped.
+- Floats are rounded to six decimal places.
+
+The manual scenario slider falls back to its in-browser estimate, since there is no server. Re-run `export-site` after `refresh` or `predict` so the site matches the database.
+
 ## Tests
 
 ```powershell

@@ -25,11 +25,35 @@
   const show = (id, visible) => { $(id).hidden = !visible; };
   const announce = message => { $("live-status").textContent = message; };
 
+  // A static export (python main.py export-site) replaces /api/ with JSON files.
+  const STATIC = Boolean(document.querySelector('meta[name="election-static"]'));
+  let sharedNews = null;
+
+  function dataPath(path) {
+    if (!STATIC) return path;
+    const url = new URL(path, "http://local");
+    const query = name => url.searchParams.get(name) || "";
+    if (url.pathname === "/api/race") return `data/race/${encodeURIComponent(query("id"))}.json`;
+    if (url.pathname === "/api/predictions") return `data/predictions-${encodeURIComponent(query("office"))}.json`;
+    if (url.pathname.startsWith("/api/")) return `data/${url.pathname.slice(5)}.json`;
+    return path.replace(/^\//, "");
+  }
+
+  // Undo the compaction in electiondb/site.py.
+  async function expandDetail(detail) {
+    if (!STATIC) return detail;
+    const groups = detail.projection?.groups || [];
+    if (!detail.forecasts) detail.forecasts = groups;
+    if (detail.demographics_from_groups) detail.demographics = groups.map(group => ({...group, ...detail.demographics_from_groups}));
+    if (detail.news_shared) detail.news = (sharedNews ||= (await api("/api/news")).news);
+    return detail;
+  }
+
   async function api(path) {
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 25000);
     try {
-      const response = await fetch(path, {signal:controller.signal, headers:{Accept:"application/json"}});
+      const response = await fetch(dataPath(path), {signal:controller.signal, headers:{Accept:"application/json"}});
       if (!response.ok) throw new Error(`The data service returned ${response.status}.`);
       return await response.json();
     } catch (error) {
@@ -105,7 +129,7 @@
     $("detail-loading").textContent = `Loading ${race.label || "race"}…`;
     show("detail-loading", true); show("detail-content", false);
     try {
-      const detail = await api(`/api/race?id=${encodeURIComponent(id)}`);
+      const detail = await expandDetail(await api(`/api/race?id=${encodeURIComponent(id)}`));
       if (request !== state.request) return;
       state.detail = detail;
       renderDetail();
@@ -329,6 +353,8 @@
 
   function requestScenario() {
     renderScenario();
+    // No server on a static host; keep the in-browser estimate from renderScenario.
+    if (STATIC) return;
     window.clearTimeout(state.scenarioTimer);
     const request=++state.scenarioRequest, raceId=state.selectedId;
     state.scenarioTimer=window.setTimeout(async()=>{
