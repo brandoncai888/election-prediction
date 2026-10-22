@@ -1,6 +1,9 @@
-# 2026 Election Observatory
+# 2026 Election
 
 An experimental forecast of the 2026 US midterms: every House seat, Senate contest and governor race. It combines who lives in each place, how those groups voted in 2024, and what the news has been saying recently. The forecasts appear on a local interactive map.
+
+## Visualization
+https://brandoncai888.github.io/election-prediction/
 
 ## Quick start
 
