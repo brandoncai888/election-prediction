@@ -16,9 +16,10 @@ from .db import ROOT
 
 WIKI_API='https://en.wikipedia.org/w/api.php'
 ROSTER=ROOT/'data'/'candidates_2026.csv'
+OVERRIDES=ROOT/'data'/'candidate_overrides.csv'
 COLUMNS=('race_id','party','candidate','incumbent','source_url')
 BOX=re.compile(r'\{\{\s*Election box begin[^|}]*\|\s*title\s*=\s*(.*?)\}\}(.*?)\{\{\s*Election box end',re.S|re.I)
-CANDIDATE=re.compile(r'\{\{\s*Election box (?:candidate|winning candidate)[^|]*((?:\|[^{}]*|\{\{[^{}]*\}\})*)\}\}',re.I)
+CANDIDATE=re.compile(r'\{\{\s*Election box (?:candidate|winning candidate)((?:[^{}]|\{\{[^{}]*\}\})*)\}\}',re.I)
 DISTRICT_HEADING=re.compile(r'^==\s*District\s+(\d+)\s*==\s*$',re.M)
 ORDINAL=re.compile(r"'s\s+(\d+)(?:st|nd|rd|th)\s+congressional district",re.I)
 
@@ -53,15 +54,25 @@ def _field(body,name):
 def _plain(text):
     text=re.sub(r'<ref[^>]*/>|<ref[^>]*>.*?</ref>|<!--.*?-->','',text,flags=re.S)
     text=re.sub(r'\[\[(?:[^|\]]*\|)?([^\]]*)\]\]',r'\1',text)
+    text=re.sub(r'\{\{\s*(?:nowrap|nobr|small)\s*\|([^{}]*)\}\}',r'\1',text,flags=re.I)
     text=re.sub(r'\{\{[^{}]*\}\}','',text)
+    text=re.sub(r"<br\s*/?>.*|<[^>]+>|'{2,}",'',text,flags=re.S)
     return re.sub(r'\s+',' ',text).strip()
+
+
+def _name(raw):
+    """Display name: no status notes, and no initials beside a full given name (S. Brett Guthrie)."""
+    name=re.sub(r'\s*\((?:incumbent|write-in|uncontested)\)\s*','',_plain(raw),flags=re.I).strip()
+    words=name.split()
+    kept=[w for w in words if not re.fullmatch(r'[A-Z]\.',w)]
+    return ' '.join(kept) if len(kept)>=2 else name
 
 
 def _party(text):
     text=_plain(text).lower()
-    if text.startswith('democratic'):
+    if 'democratic' in text:  # includes Minnesota's Democratic–Farmer–Labor Party
         return 'D'
-    if text.startswith('republican'):
+    if 'republican' in text:
         return 'R'
     return 'O'
 
@@ -76,7 +87,7 @@ def general_candidates(wikitext):
         rows=[]
         for candidate in CANDIDATE.finditer(match.group(2)):
             raw=_field(candidate.group(1),'candidate')
-            name=re.sub(r'\s*\((?:incumbent|write-in)\)\s*','',_plain(raw),flags=re.I).strip()
+            name=_name(raw)
             if name and name.lower() not in ('none of these candidates','write-in','write-ins'):
                 rows.append((_party(_field(candidate.group(1),'party')),name,'incumbent' in raw.lower()))
         if rows:
@@ -84,11 +95,54 @@ def general_candidates(wikitext):
     return boxes
 
 
+def _votes(body):
+    digits=re.sub(r'[^\d]','',_plain(_field(body,'votes')))
+    return int(digits) if digits else None
+
+
+def nominees(section):
+    """Fallback before a general-election box exists: infobox nominees, then primary winners.
+
+    A party primary contributes its top vote-getter (a later runoff box replaces
+    it); a top-two blanket primary contributes both finishers.
+    """
+    found={}
+    infobox=re.search(r'\{\{\s*Infobox election(.*?)\n\}\}',section,re.S|re.I)
+    if infobox:
+        for n in range(1,5):
+            name=_name(_field(infobox.group(1),f'nominee{n}') or _field(infobox.group(1),f'candidate{n}'))
+            if name:
+                found[(_party(_field(infobox.group(1),f'party{n}')),name)]=None
+    if found:
+        return [(party,name,False) for party,name in found]
+    winners={}
+    for match in BOX.finditer(section):
+        title=_plain(match.group(1))
+        rows=[(_votes(c.group(1)),_party(_field(c.group(1),'party')),
+               _name(_field(c.group(1),'candidate')),
+               'incumbent' in _field(c.group(1),'candidate').lower()) for c in CANDIDATE.finditer(match.group(2))]
+        rows=sorted((r for r in rows if r[0] and r[2]),reverse=True)
+        if not rows:
+            continue
+        if re.search(r'nonpartisan|blanket|top-two|top-four|jungle',title,re.I):
+            winners={}
+            for votes,party,name,incumbent in rows[:2]:
+                winners.setdefault(party,[]).append((name,incumbent))
+        else:
+            party=re.match(r'\s*(Democratic|Republican)',title)
+            if party and re.search(r'primary',title,re.I):
+                winners[party.group(1)[0]]=[(rows[0][2],rows[0][3])]
+    return [(party,name,incumbent) for party,names in winners.items() for name,incumbent in names]
+
+
 def _house_page(name,folder):
     for page in (f'2026 United States House of Representatives elections in {name}',
                  f'2026 United States House of Representatives election in {name}'):
         text=_wikitext(page,folder)
         if text:
+            # Large delegations split districts into sub-articles, e.g. California (districts 1–26).
+            for sub in re.findall(r'\{\{\s*main\s*\|\s*([^|}]*\(districts [^|}]*\))\s*\}\}',text,re.I):
+                text+='\n'+(_wikitext(sub,folder) or '')
             return page,text
     return None,None
 
@@ -124,22 +178,25 @@ def fetch_candidates(conn,cache_dir=ROOT/'data'/'cache',out=ROSTER):
                 district=before[-1] if before else None
             if district is not None:
                 by_district[district]=rows  # the last general box in a section is the general election
+        bounds=[pos for pos,_ in headings]+[len(text)]
+        sections={d:text[pos:bounds[i+1]] for i,(pos,d) in enumerate(headings)}
         for race in races:
-            rows=by_district.get(int(race['district']))
+            district=int(race['district'])
+            rows=by_district.get(district) or nominees(text if len(races)==1 else sections.get(district,''))
             if not rows:
                 missing.append(race['race_id'])
                 continue
             roster+=[(race['race_id'],party,name,incumbent,source) for party,name,incumbent in rows]
     for race in conn.execute("SELECT race_id,state,election_type FROM races WHERE office='senate' ORDER BY state").fetchall():
         page=f"2026 United States Senate {'special election' if race['election_type']=='special' else 'election'} in {names[race['state']]}"
-        text=_wikitext(page,folder)
-
-        boxes=general_candidates(text or '')
-        if not boxes:
+        text=_wikitext(page,folder) or ''
+        boxes=general_candidates(text)
+        rows=boxes[-1][2] if boxes else nominees(text)
+        if not rows:
             missing.append(race['race_id'])
             continue
         source='https://en.wikipedia.org/wiki/'+quote(page.replace(' ','_'))
-        roster+=[(race['race_id'],party,name,incumbent,source) for party,name,incumbent in boxes[-1][2]]
+        roster+=[(race['race_id'],party,name,incumbent,source) for party,name,incumbent in rows]
     with open(out,'w',newline='',encoding='utf-8') as stream:
         writer=csv.writer(stream)
         writer.writerow(COLUMNS)
@@ -148,10 +205,18 @@ def fetch_candidates(conn,cache_dir=ROOT/'data'/'cache',out=ROSTER):
 
 
 def load_roster(path=ROSTER):
-    """{race_id: {party: [names]}} from the saved roster; empty when none was fetched."""
+    """{race_id: {party: [names]}} with incumbents first; empty when none was fetched."""
     roster={}
     if Path(path).exists():
         with open(path,encoding='utf-8',newline='') as stream:
-            for row in csv.DictReader(stream):
+            for row in sorted(csv.DictReader(stream),key=lambda r:r['incumbent']!='True'):
                 roster.setdefault(row['race_id'],{}).setdefault(row['party'],[]).append(row['candidate'])
     return roster
+
+
+def load_overrides(path=OVERRIDES):
+    """{(race_id, party): candidate} chosen by hand where the sources leave a choice open."""
+    if not Path(path).exists():
+        return {}
+    with open(path,encoding='utf-8',newline='') as stream:
+        return {(row['race_id'],row['party']):row['candidate'] for row in csv.DictReader(stream)}

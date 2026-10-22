@@ -15,8 +15,8 @@ from .db import ROOT, utc_now
 
 API='https://api.elections.kalshi.com/trade-api/v2'
 SOURCE_ID='kalshi-election-markets'
-AUTO_PICK=0.80          # model probability above which the favorite is always picked
-UNDERDOG_RATIO=2.0     # underdog expected points must reach this multiple of the favorite's
+AUTO_PICK=0.70          # model probability above which the favorite is always picked
+UNDERDOG_RATIO=2.5     # underdog expected points must reach this multiple of the favorite's
 THIRD_CANDIDATE=0.05   # a non-major candidate priced at least this high breaks the two-party mapping
 PRICE_FLOOR=0.01       # keeps -log2(p) finite; a correct pick is worth at most log2(100) = 6.6 points
 # Tickers are not reliable (SENATELA-26 is the Kentucky race), so each market is
@@ -210,16 +210,19 @@ def pick_name(kalshi_name,listed):
 def strategy(conn,as_of):
     """Every House and Senate pick, plus the rules and totals the dashboard shows."""
     from .forecasts import forecast_overview
-    from .candidates import load_roster
+    from .candidates import load_roster,load_overrides
     prices,fetched_at=stored_prices(conn)
     roster=load_roster()
+    overrides=load_overrides()
     races=[]
     for race in forecast_overview(conn,as_of)['races']:
         if race['office'] not in ('house','senate') or race.get('win_probability_d') is None:
             continue
         pick=choose_pick(race['win_probability_d'],prices.get(race['race_id'],{}))
         pick['kalshi_candidate']=pick['candidate']
-        pick['candidate'],pick['name_check']=pick_name(pick['candidate'],roster.get(race['race_id'],{}).get(pick['pick'],[]))
+        override=overrides.get((race['race_id'],pick['pick']))
+        pick['candidate'],pick['name_check']=(override,'override') if override else \
+            pick_name(pick['candidate'],roster.get(race['race_id'],{}).get(pick['pick'],[]))
         races.append({'race_id':race['race_id'],'label':race['label'],'office':race['office'],'state':race['state'],
                       'district':race.get('district'),**pick})
     reasons={}

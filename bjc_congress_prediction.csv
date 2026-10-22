@@ -1,11 +1,11 @@
 state,district,chamber,predicted_winner,party,model_probability
-AK,,Senate,,Republican,0.6895
+AK,,Senate,Dan Sullivan,Republican,0.6895
 AL,,Senate,Barry Moore,Republican,0.9964
 AR,,Senate,Tom Cotton,Republican,0.9965
 CO,,Senate,John Hickenlooper,Democratic,0.9928
 DE,,Senate,Chris Coons,Democratic,0.9971
 FL,,Senate,Angie Nixon,Democratic,0.3449
-GA,,Senate,Mike Collins,Republican,0.2336
+GA,,Senate,Jon Ossoff,Democratic,0.7664
 IA,,Senate,Ashley Hinson,Republican,0.7131
 ID,,Senate,Jim Risch,Republican,0.9996
 IL,,Senate,Juliana Stratton,Democratic,0.9912
@@ -18,7 +18,7 @@ MI,,Senate,Abdul El-Sayed,Democratic,0.7906
 MN,,Senate,Peggy Flanagan,Democratic,0.9395
 MS,,Senate,Cindy Hyde-Smith,Republican,0.9641
 MT,,Senate,Kurt Alme,Republican,0.9143
-NC,,Senate,Michael Whatley,Republican,0.2622
+NC,,Senate,Roy Cooper,Democratic,0.7378
 NE,,Senate,Pete Ricketts,Republican,0.9166
 NH,,Senate,Chris Pappas,Democratic,0.9113
 NJ,,Senate,Cory Booker,Democratic,0.9661
@@ -46,29 +46,29 @@ AR,01,House,Rick Crawford,Republican,1.0
 AR,02,House,French Hill,Republican,0.8171
 AR,03,House,Steve Womack,Republican,0.9717
 AR,04,House,Bruce Westerman,Republican,0.9999
-AZ,01,House,Jay Feely,Republican,0.2182
+AZ,01,House,Amish Shah,Democratic,0.7818
 AZ,02,House,Eli Crane,Republican,0.7322
 AZ,03,House,Yassamin Ansari,Democratic,1.0
 AZ,04,House,Greg Stanton,Democratic,0.974
 AZ,05,House,Mark Lamb,Republican,0.887
 AZ,06,House,JoAnna Mendoza,Democratic,0.8589
 AZ,07,House,Adelita Grijalva,Democratic,0.9999
-AZ,08,House,Bernadette Greene-Placentia,Democratic,0.212
+AZ,08,House,Abraham Hamadeh,Republican,0.788
 AZ,09,House,Paul Gosar,Republican,0.9946
 CA,01,House,Mike McGuire,Democratic,0.995
 CA,02,House,Jared Huffman,Democratic,1.0
 CA,03,House,Ami Bera,Democratic,0.9912
-CA,04,House,,Democratic,0.9983
+CA,04,House,Mike Thompson,Democratic,0.9983
 CA,05,House,Tom McClintock,Republican,0.9054
 CA,06,House,Richard Pan,Democratic,0.9854
-CA,07,House,,Democratic,0.9975
+CA,07,House,Doris Matsui,Democratic,0.9975
 CA,08,House,John Garamendi,Democratic,1.0
 CA,09,House,Josh Harder,Democratic,0.9955
 CA,10,House,Mark DeSaulnier,Democratic,1.0
-CA,11,House,,Democratic,1.0
-CA,12,House,,Democratic,1.0
+CA,11,House,Scott Wiener,Democratic,1.0
+CA,12,House,Lateefah Simon,Democratic,1.0
 CA,13,House,Adam Gray,Democratic,0.9021
-CA,14,House,,Democratic,1.0
+CA,14,House,Aisha Wahab,Democratic,1.0
 CA,15,House,Kevin Mullin,Democratic,1.0
 CA,16,House,Sam Liccardo,Democratic,1.0
 CA,17,House,Ro Khanna,Democratic,1.0
@@ -83,18 +83,18 @@ CA,25,House,Raul Ruiz,Democratic,0.9754
 CA,26,House,Jacqui Irwin,Democratic,0.999
 CA,27,House,George Whitesides,Democratic,0.9922
 CA,28,House,Judy Chu,Democratic,1.0
-CA,29,House,,Democratic,1.0
+CA,29,House,Luz Rivas,Democratic,1.0
 CA,30,House,Laura Friedman,Democratic,1.0
 CA,31,House,Gil Cisneros,Democratic,0.998
 CA,32,House,Brad Sherman,Democratic,1.0
 CA,33,House,Pete Aguilar,Democratic,0.9939
-CA,34,House,,Democratic,1.0
+CA,34,House,Jimmy Gomez,Democratic,1.0
 CA,35,House,Norma Torres,Democratic,0.9902
 CA,36,House,Ted Lieu,Democratic,1.0
-CA,37,House,,Democratic,1.0
+CA,37,House,Sydney Kamlager-Dove,Democratic,1.0
 CA,38,House,Hilda Solis,Democratic,0.9983
 CA,39,House,Mark Takano,Democratic,0.993
-CA,40,House,,Republican,0.581
+CA,40,House,Ken Calvert,Republican,0.581
 CA,41,House,Linda Sánchez,Democratic,0.9982
 CA,42,House,Robert Garcia,Democratic,0.9984
 CA,43,House,Maxine Waters,Democratic,1.0
@@ -131,9 +131,9 @@ FL,07,House,Bale Dalton,Democratic,0.3682
 FL,08,House,Mike Haridopolos,Republican,0.8071
 FL,09,House,Dan Green,Republican,0.7643
 FL,10,House,Maxwell Frost,Democratic,1.0
-FL,11,House,James Pericola,Democratic,0.2318
-FL,12,House,Kimberly Overman,Democratic,0.2071
-FL,13,House,Leela Gray,Democratic,0.3014
+FL,11,House,Joe Strada,Republican,0.7682
+FL,12,House,Gus Bilirakis,Republican,0.7929
+FL,13,House,Anna Paulina Luna,Republican,0.6986
 FL,14,House,Mike Beltran,Republican,0.5248
 FL,15,House,Laurel Lee,Republican,0.8874
 FL,16,House,Kelly Kirschner,Democratic,0.3024
@@ -141,13 +141,13 @@ FL,17,House,Greg Steube,Republican,0.9396
 FL,18,House,Scott Franklin,Republican,0.827
 FL,19,House,Jim Schwartzel,Republican,0.9932
 FL,20,House,Debbie Wasserman Schultz,Democratic,1.0
-FL,21,House,James Martin,Democratic,0.2061
+FL,21,House,Brian Mast,Republican,0.7939
 FL,22,House,Casey Askar,Republican,0.5212
 FL,23,House,Lois Frankel,Democratic,0.9972
 FL,24,House,Oliver Gilbert,Democratic,1.0
 FL,25,House,Scott Singer,Republican,0.394
-FL,26,House,Nicole Locklin,Democratic,0.239
-FL,27,House,Eliott Rodriguez,Democratic,0.4393
+FL,26,House,Mario Díaz-Balart,Republican,0.761
+FL,27,House,María Elvira Salazar,Republican,0.5607
 FL,28,House,Carlos Giménez,Republican,0.9302
 GA,01,House,Jim Kingston,Republican,0.8154
 GA,02,House,Sanford Bishop,Democratic,0.9644
@@ -160,7 +160,7 @@ GA,08,House,Austin Scott,Republican,0.9963
 GA,09,House,Andrew Clyde,Republican,0.9985
 GA,10,House,Houston Gaines,Republican,0.9319
 GA,11,House,John Cowan,Republican,0.9554
-GA,12,House,Ceretta Smith,Democratic,0.2254
+GA,12,House,Rick Allen,Republican,0.7746
 GA,13,House,Jasmine Clark,Democratic,1.0
 GA,14,House,Clay Fuller,Republican,0.9996
 HI,01,House,Ed Case,Democratic,1.0
@@ -207,12 +207,12 @@ KY,03,House,Morgan McGarvey,Democratic,0.9994
 KY,04,House,Ed Gallrein,Republican,0.9994
 KY,05,House,Hal Rogers,Republican,1.0
 KY,06,House,Ralph Alvarado,Republican,0.7845
-LA,01,House,,Republican,0.9998
-LA,02,House,,Democratic,1.0
-LA,03,House,,Republican,0.9996
-LA,04,House,,Republican,0.9991
-LA,05,House,,Republican,0.9991
-LA,06,House,,Republican,0.9956
+LA,01,House,Steve Scalise,Republican,0.9998
+LA,02,House,Troy Carter,Democratic,1.0
+LA,03,House,Clay Higgins,Republican,0.9996
+LA,04,House,Mike Johnson,Republican,0.9991
+LA,05,House,Michael Echols,Republican,0.9991
+LA,06,House,Rick Edmonds,Republican,0.9956
 MA,01,House,Richard Neal,Democratic,0.9961
 MA,02,House,Jim McGovern,Democratic,1.0
 MA,03,House,Lori Trahan,Democratic,0.9996
@@ -239,20 +239,20 @@ MI,04,House,Sean McCann,Democratic,0.6392
 MI,05,House,Tim Walberg,Republican,0.9877
 MI,06,House,Debbie Dingell,Democratic,0.9999
 MI,07,House,William Lawrence,Democratic,0.8112
-MI,08,House,Thomas J. Smith,Republican,0.2347
+MI,08,House,Kristen McDonald Rivet,Democratic,0.7653
 MI,09,House,Lisa McClain,Republican,0.9978
-MI,10,House,Michael Bouchard Jr.,Republican,0.4293
+MI,10,House,Christina Hines,Democratic,0.5707
 MI,11,House,Jeremy Moss,Democratic,0.9985
 MI,12,House,Rashida Tlaib,Democratic,1.0
 MI,13,House,Donavan McKinney,Democratic,1.0
-MN,01,House,Jake Johnson,Democratic,0.3411
+MN,01,House,Brad Finstad,Republican,0.6589
 MN,02,House,Matt Little,Democratic,0.9613
 MN,03,House,Kelly Morrison,Democratic,0.9999
 MN,04,House,Betty McCollum,Democratic,1.0
 MN,05,House,Ilhan Omar,Democratic,1.0
 MN,06,House,Tom Emmer,Republican,0.9062
 MN,07,House,Michelle Fischbach,Republican,0.9996
-MN,08,House,Trina Swanson,Democratic,0.2435
+MN,08,House,Pete Stauber,Republican,0.7565
 MO,01,House,Wesley Bell,Democratic,1.0
 MO,02,House,Fred Wellman,Democratic,0.5502
 MO,03,House,Bob Onder,Republican,0.9849
@@ -269,18 +269,18 @@ MT,01,House,Aaron Flint,Republican,0.6388
 MT,02,House,Troy Downing,Republican,0.9943
 NC,01,House,Laurie Buckhout,Republican,0.671
 NC,02,House,Deborah Ross,Democratic,1.0
-NC,03,House,Raymond Smith Jr.,Democratic,0.2763
+NC,03,House,Greg Murphy,Republican,0.7237
 NC,04,House,Valerie Foushee,Democratic,1.0
 NC,05,House,Virginia Foxx,Republican,0.8738
 NC,06,House,Addison McDowell,Republican,0.8504
-NC,07,House,Kim Hardy,Democratic,0.2712
+NC,07,House,David Rouzer,Republican,0.7288
 NC,08,House,Mark Harris,Republican,0.8939
 NC,09,House,Richard Hudson,Republican,0.8066
 NC,10,House,Pat Harrigan,Republican,0.8601
 NC,11,House,Jennifer Balkcom,Republican,0.5383
 NC,12,House,Alma Adams,Democratic,1.0
 NC,13,House,Brad Knott,Republican,0.8235
-NC,14,House,LaKesha Womack,Democratic,0.2235
+NC,14,House,Tim Moore,Republican,0.7765
 ND,AL,House,Julie Fedorchak,Republican,0.9996
 NE,01,House,Chris Backemeyer,Democratic,0.3113
 NE,02,House,Denise Powell,Democratic,0.9474
@@ -307,8 +307,8 @@ NV,02,House,David Flippo,Republican,0.7211
 NV,03,House,Susie Lee,Democratic,0.8573
 NV,04,House,Steven Horsford,Democratic,0.9183
 NY,01,House,Chris Gallant,Democratic,0.4604
-NY,02,House,Patrick Halpin,Democratic,0.2931
-NY,03,House,Mike LiPetri,Republican,0.2488
+NY,02,House,Andrew Garbarino,Republican,0.7069
+NY,03,House,Tom Suozzi,Democratic,0.7512
 NY,04,House,Laura Gillen,Democratic,0.9
 NY,05,House,Gregory Meeks,Democratic,1.0
 NY,06,House,Grace Meng,Democratic,0.9792
@@ -332,7 +332,7 @@ NY,23,House,Nick Langworthy,Republican,0.9327
 NY,24,House,Claudia Tenney,Republican,0.9601
 NY,25,House,Joseph Morelle,Democratic,0.9994
 NY,26,House,Tim Kennedy,Democratic,0.9995
-OH,01,House,Eric Conroy,Republican,0.2426
+OH,01,House,Greg Landsman,Democratic,0.7574
 OH,02,House,David Taylor,Republican,1.0
 OH,03,House,Joyce Beatty,Democratic,1.0
 OH,04,House,Jim Jordan,Republican,1.0
@@ -346,7 +346,7 @@ OH,11,House,Shontel Brown,Democratic,1.0
 OH,12,House,Troy Balderson,Republican,0.9957
 OH,13,House,Emilia Sykes,Democratic,0.9107
 OH,14,House,David Joyce,Republican,0.9287
-OH,15,House,Don Leonard,Democratic,0.4178
+OH,15,House,Mike Carey,Republican,0.5822
 OK,01,House,Mark Tedford,Republican,0.9304
 OK,02,House,Josh Brecheen,Republican,1.0
 OK,03,House,Frank Lucas,Republican,1.0
@@ -364,7 +364,7 @@ PA,03,House,Chris Rabb,Democratic,1.0
 PA,04,House,Madeleine Dean,Democratic,0.9981
 PA,05,House,Mary Gay Scanlon,Democratic,1.0
 PA,06,House,Chrissy Houlahan,Democratic,0.9923
-PA,07,House,Ryan Mackenzie,Republican,0.2584
+PA,07,House,Bob Brooks,Democratic,0.7416
 PA,08,House,Rob Bresnahan,Republican,0.5144
 PA,09,House,Dan Meuser,Republican,0.9998
 PA,10,House,Scott Perry,Republican,0.3578
@@ -378,7 +378,7 @@ PA,17,House,Chris Deluzio,Democratic,0.9507
 RI,01,House,Gabe Amo,Democratic,0.9999
 RI,02,House,Seth Magaziner,Democratic,0.9689
 SC,01,House,Jenny Costa Honeycutt,Republican,0.6922
-SC,02,House,Zyon Khalifa,Democratic,0.2492
+SC,02,House,Joe Wilson,Republican,0.7508
 SC,03,House,Sheri Biggs,Republican,1.0
 SC,04,House,William Timmons,Republican,0.962
 SC,05,House,Wes Climer,Republican,0.9603
@@ -417,7 +417,7 @@ TX,20,House,Joaquin Castro,Democratic,1.0
 TX,21,House,Mark Teixeira,Republican,0.9135
 TX,22,House,Trever Nehls,Republican,0.9202
 TX,23,House,Brandon Herrera,Republican,0.6561
-TX,24,House,Kevin Burge,Democratic,0.2292
+TX,24,House,Beth Van Duyne,Republican,0.7708
 TX,25,House,Roger Williams,Republican,0.961
 TX,26,House,Brandon Gill,Republican,0.9509
 TX,27,House,Michael Cloud,Republican,0.8995
@@ -428,7 +428,7 @@ TX,31,House,John Carter,Republican,0.9238
 TX,32,House,Jace Yarbrough,Republican,0.8138
 TX,33,House,Colin Allred,Democratic,1.0
 TX,34,House,Eric Flores,Republican,0.3721
-TX,35,House,Carlos De La Cruz,Republican,0.4685
+TX,35,House,Johnny Garcia,Democratic,0.5315
 TX,36,House,Brian Babin,Republican,0.9668
 TX,37,House,Greg Casar,Democratic,1.0
 TX,38,House,Jon Bonck,Republican,0.8962
@@ -450,7 +450,7 @@ VA,11,House,James Walkinshaw,Democratic,1.0
 VT,AL,House,Becca Balint,Democratic,1.0
 WA,01,House,Suzan DelBene,Democratic,1.0
 WA,02,House,Rick Larsen,Democratic,1.0
-WA,03,House,John Braun,Republican,0.2578
+WA,03,House,Marie Gluesenkamp Perez,Democratic,0.7422
 WA,04,House,Amanda McKinney,Republican,0.9153
 WA,05,House,Carmela Conroy,Democratic,0.4036
 WA,06,House,Emily Randall,Democratic,0.9997
