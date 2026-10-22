@@ -10,117 +10,99 @@
   <script src="app.js" defer></script>
 </head>
 <body>
-  <a class="skip-link" href="#main">Skip to research dashboard</a>
+  <a class="skip-link" href="#main">Skip to content</a>
   <header class="site-header">
     <a class="brand" href="./" aria-label="Electorate home"><span class="brand-symbol" aria-hidden="true"><i></i><i></i><i></i></span>electorate<span class="brand-dot">.</span></a>
-    <div class="header-right"><span class="edition">2026 MIDTERM RESEARCH</span><span class="local-badge"><span></span>Local workspace</span></div>
+    <div class="header-right"><span class="edition">2026 MIDTERM FORECAST</span><span class="local-badge"><span></span><b id="as-of" class="as-of">2026 election cycle</b></span></div>
   </header>
+  <nav class="site-tabs" role="tablist" aria-label="Sections">
+    <button type="button" role="tab" id="tab-overview" data-tab="overview" aria-controls="panel-overview" aria-selected="true">Overview</button>
+    <button type="button" role="tab" id="tab-map" data-tab="map" aria-controls="panel-map" aria-selected="false" tabindex="-1">Map</button>
+    <button type="button" role="tab" id="tab-table" data-tab="table" aria-controls="panel-table" aria-selected="false" tabindex="-1">Win probability &amp; margin</button>
+    <button type="button" role="tab" id="tab-district" data-tab="district" aria-controls="panel-district" aria-selected="false" tabindex="-1">Find a district</button>
+  </nav>
 
   <main id="main">
-    <section id="picks" class="picks-panel" aria-labelledby="picks-heading" hidden>
-      <div class="forecast-map-heading"><div><p class="eyebrow">HOW I CHOSE MY PREDICTIONS</p><h2 id="picks-heading">Picks that maximize expected points</h2></div><span id="picks-updated" class="picks-updated"></span></div>
-      <p class="picks-lede">A correct pick scores <b>log<sub>½</sub>(p)</b> points, where <i>p</i> is Kalshi's price for the candidate I pick; a wrong pick scores 0. Calling a 97% favorite earns 0.04 points, while calling a 3% long shot earns 5.1, so the model's favorite is not always the best pick. Each House and Senate race is decided by these rules:</p>
-      <ol id="picks-rules" class="method-steps picks-rules"></ol>
-      <div id="picks-stats" class="picks-stats"></div>
-      <h3 class="picks-subheading">Races where I pick the model's underdog</h3>
-      <div class="data-table-wrap picks-table-wrap"><table class="picks-table"><caption class="sr-only">Races where the pick goes against the model favorite</caption><thead><tr><th scope="col">Race</th><th scope="col">My pick</th><th scope="col" class="numeric">Model win %</th><th scope="col" class="numeric">Kalshi price</th><th scope="col" class="numeric">Points if right</th><th scope="col" class="numeric">Expected points</th><th scope="col" class="numeric">Favorite's expected points</th></tr></thead><tbody id="picks-underdogs"></tbody></table></div>
-      <details class="competitive-races picks-all"><summary>Every race decided on expected points <span id="picks-close-count"></span></summary><div class="data-table-wrap picks-table-wrap"><table class="picks-table"><caption class="sr-only">Every race where the model favorite is at or below the automatic-pick threshold</caption><thead><tr><th scope="col">Race</th><th scope="col">Model favorite</th><th scope="col" class="numeric">Model</th><th scope="col" class="numeric">Kalshi D / R</th><th scope="col" class="numeric">Favorite EV</th><th scope="col" class="numeric">Underdog EV</th><th scope="col">Decision</th></tr></thead><tbody id="picks-close"></tbody></table></div></details>
-    </section>
-
-    <section class="intro" aria-labelledby="page-heading">
-      <div class="intro-head"><h1 id="page-heading">2026 midterm forecast</h1><p class="intro-copy">Projections for all 435 House seats, 35 Senate contests and 36 governor races. <span id="as-of">2026 election cycle</span></p></div>
-      <h2 class="sr-only">How the forecast works</h2>
-      <ol class="method-steps">
-        <li><b>Who lives there.</b> Census data splits each state or district into 32 groups of adults 25+ by race/ethnicity, sex and education.</li>
-        <li><b>How they voted in 2024.</b> A penalized logistic model fitted to the 2024 Cooperative Election Study estimates each group's Democratic share, then shifts all groups together so each race matches its actual 2024 presidential result.</li>
-        <li><b>National environment.</b> The 2026 national House vote is half the average out-party midterm gain since 2010 and half the generic-ballot polling average. Groups that historically swing more in midterms move more.</li>
-        <li><b>Midterm turnout.</b> Groups are weighted by their validated 2018 and 2022 turnout rates, so each midterm electorate differs from its 2024 one.</li>
-        <li><b>Group news.</b> Recent coverage of specific racial groups and their issues shifts those groups further. The size of that effect is fitted to the 2010–2022 midterms.</li>
-        <li><b>Margin to odds.</b> Groups add up to a projected margin. Win probability is Φ(margin / σ), with σ combining race-level error (7 pts House and Senate, 9 governor) and 5 pts of national error. Chamber control comes from 20,000 simulations.</li>
-      </ol>
-    </section>
-
     <div id="app-notice" class="notice error-notice" role="alert" hidden></div>
-    <section class="forecast-map-panel" aria-labelledby="forecast-heading">
-      <div class="forecast-map-heading"><div><p class="eyebrow">THE BALANCE OF POWER</p><h2 id="forecast-heading">2026 seat projections</h2></div><div class="map-switch" role="group" aria-label="Select chamber"><button type="button" data-map-office="house" aria-pressed="true">House <span>435 seats</span></button><button type="button" data-map-office="senate" aria-pressed="false">Senate <span>Seats up in 2026</span></button></div></div>
-      <p class="map-model-note"><span class="experiment-dot"></span><strong>Experimental model</strong> · Baselines are anchored to actual 2024 results. The national environment blends the typical midterm out-party gain with generic-ballot polls; expected midterm turnout and group-specific news then adjust each place. Win probabilities use historically measured race-level error plus national uncertainty. <a href="#race-table">See every race ↓</a></p>
-      <div class="chamber-tally"><div class="party-total dem-total"><span>Democrats</span><strong id="map-dem-count">—</strong><small id="map-dem-detail"></small></div><div class="tally-context"><strong id="map-seat-context">435 seats · 218 for a majority</strong><span id="map-coverage">Loading race projections…</span><span id="map-control" class="control-odds"></span></div><div class="party-total rep-total"><span>Republicans</span><strong id="map-rep-count">—</strong><small id="map-rep-detail"></small></div></div>
-      <div class="chamber-bar-wrap"><div class="chamber-bar" id="chamber-bar" aria-label="Projected chamber seats"></div><div class="majority-marker" id="majority-marker"><span id="majority-label">218</span></div></div>
-      <div class="map-legend" aria-label="Rating by Democratic or Republican win probability"><span><i style="background:#1c408c"></i>Safe D ≥95%</span><span><i style="background:#577ccc"></i>Likely D 85–95%</span><span><i style="background:#8aafff"></i>Lean D 65–85%</span><span><i style="background:#949bb3"></i>Tilt D 55–65%</span><span><i style="background:#9e8767"></i>Toss-up</span><span><i style="background:#cf8980"></i>Tilt R 55–65%</span><span><i style="background:#ff8b98"></i>Lean R 65–85%</span><span><i style="background:#ff5865"></i>Likely R 85–95%</span><span><i style="background:#bf1d29"></i>Safe R ≥95%</span><span><i style="background:#d9d9d9"></i>No 2026 election / not up</span></div>
-      <div id="map-loading" class="map-loading" role="status">Calculating the seat map…</div>
-      <div id="house-map" class="house-map map-scroll" aria-label="House district seat cartogram" hidden></div>
-      <div id="senate-map" class="senate-map" aria-label="Senate state map" hidden></div>
-      <div id="map-tooltip" class="map-tooltip" role="tooltip" hidden></div>
-      <div class="map-bottom"><p id="map-geography-note">House seat cartogram: one tile per district, grouped approximately geographically by state. Tiles do not represent district boundaries.</p><span id="map-updated"></span></div>
-      <div id="map-race-preview" class="map-race-preview" role="status"><span>Select a seat to inspect its demographic forecast and news evidence.</span><a href="#race-detail">Explore the selected race ↓</a></div>
-      <details class="competitive-races"><summary>Closest projected races <span id="competitive-count"></span></summary><div id="competitive-list" class="competitive-list"></div></details>
+
+    <section id="panel-overview" class="tab-panel" role="tabpanel" aria-labelledby="tab-overview">
+      <section id="picks" class="picks-panel" aria-labelledby="picks-heading" hidden>
+        <div class="forecast-map-heading"><div><p class="eyebrow">HOW I CHOSE MY PREDICTIONS</p><h2 id="picks-heading">Picks that maximize expected points</h2></div><span id="picks-updated" class="picks-updated"></span></div>
+        <p class="picks-lede">A correct pick scores <b>log<sub>½</sub>(p)</b> points, where <i>p</i> is Kalshi's price for the candidate I pick; a wrong pick scores 0. Calling a 97% favorite earns 0.04 points, while calling a 3% long shot earns 5.1, so the model's favorite is not always the best pick. Each House and Senate race is decided by these rules:</p>
+        <ol id="picks-rules" class="method-steps picks-rules"></ol>
+        <div id="picks-stats" class="picks-stats"></div>
+        <h3 class="picks-subheading">Races where I pick the model's underdog</h3>
+        <div class="data-table-wrap picks-table-wrap"><table class="picks-table"><caption class="sr-only">Races where the pick goes against the model favorite</caption><thead><tr><th scope="col">Race</th><th scope="col">My pick</th><th scope="col" class="numeric">Model win %</th><th scope="col" class="numeric">Kalshi price</th><th scope="col" class="numeric">Points if right</th><th scope="col" class="numeric">Expected points</th><th scope="col" class="numeric">Favorite's expected points</th></tr></thead><tbody id="picks-underdogs"></tbody></table></div>
+        <details class="competitive-races picks-all"><summary>Every race decided on expected points <span id="picks-close-count"></span></summary><div class="data-table-wrap picks-table-wrap"><table class="picks-table"><caption class="sr-only">Every race where the model favorite is at or below the automatic-pick threshold</caption><thead><tr><th scope="col">Race</th><th scope="col">Model favorite</th><th scope="col" class="numeric">Model</th><th scope="col" class="numeric">Kalshi D / R</th><th scope="col" class="numeric">Favorite EV</th><th scope="col" class="numeric">Underdog EV</th><th scope="col">Decision</th></tr></thead><tbody id="picks-close"></tbody></table></div></details>
+      </section>
+
+      <section class="intro" aria-labelledby="page-heading">
+        <div class="intro-head"><h2 id="page-heading">How the forecast works</h2><p class="intro-copy">Projections for all 435 House seats, 35 Senate contests and 36 governor races.</p></div>
+        <ol class="method-steps">
+          <li><b>Who lives there.</b> Census data splits each state or district into 32 groups of adults 25+ by race/ethnicity, sex and education.</li>
+          <li><b>How they voted in 2024.</b> A penalized logistic model fitted to the 2024 Cooperative Election Study estimates each group's Democratic share, then shifts all groups together so each race matches its actual 2024 presidential result.</li>
+          <li><b>National environment.</b> The 2026 national House vote is half the average out-party midterm gain since 2010 and half the generic-ballot polling average. Groups that historically swing more in midterms move more.</li>
+          <li><b>Midterm turnout.</b> Groups are weighted by their validated 2018 and 2022 turnout rates, so each midterm electorate differs from its 2024 one.</li>
+          <li><b>Group news.</b> Recent coverage of specific racial groups and their issues shifts those groups further. The size of that effect is fitted to the 2010–2022 midterms.</li>
+          <li><b>Margin to odds.</b> Groups add up to a projected margin. Win probability is Φ(margin / σ), with σ combining race-level error (7 pts House and Senate, 9 governor) and 5 pts of national error. Chamber control comes from 20,000 simulations.</li>
+        </ol>
+        <details class="limitations"><summary>Research limitations</summary><ul id="limitations-list"><li>Demographic associations do not establish individual voting behavior.</li></ul></details>
+      </section>
     </section>
-    <section id="race-table" class="forecast-table-panel" aria-labelledby="table-heading">
-      <div class="forecast-map-heading"><div><p class="eyebrow">EVERY RACE</p><h2 id="table-heading">Win probability &amp; margin</h2></div><div class="map-switch" role="group" aria-label="Select office for the table"><button type="button" data-table-office="senate" aria-pressed="true">Senate <span>35 races</span></button><button type="button" data-table-office="governor" aria-pressed="false">Governor <span>36 races</span></button><button type="button" data-table-office="house" aria-pressed="false">House <span>435 races</span></button></div></div>
-      <p class="table-explainer">Margin = projected Democratic minus Republican two-party share. <b>2024 baseline</b> is the actual 2024 presidential result in that state or district (2026 lines where redrawn). <b>News shift</b> is how much the news-tone and issue-content model moves the margin. <b>Win % without news</b> shows the same race with no news adjustment, so the difference is the news effect on the odds.</p>
-      <div class="table-tools"><label class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m16 16 4.5 4.5"></path></svg><input id="table-search" type="search" placeholder="Filter by state, district, or rating" aria-label="Filter race table" autocomplete="off"></label><span id="table-count" role="status"></span><a class="table-download" href="data/forecast_table_2026.csv" download="forecast_table_2026.csv">Download CSV ↓</a></div>
-      <div class="data-table-wrap race-table-wrap"><table class="race-table"><caption class="sr-only">Win probability and projected margin for every race</caption><thead><tr><th scope="col"><button type="button" data-sort="label">Race</button></th><th scope="col"><button type="button" data-sort="rating">Rating</button></th><th scope="col" class="numeric"><button type="button" data-sort="win_probability_d">D win %</button></th><th scope="col" class="numeric"><button type="button" data-sort="win_probability_r">R win %</button></th><th scope="col" class="numeric"><button type="button" data-sort="margin_pp">Projected margin</button></th><th scope="col" class="numeric"><button type="button" data-sort="baseline_margin_pp">2024 baseline</button></th><th scope="col" class="numeric"><button type="button" data-sort="news_margin_shift_pp">News shift</button></th><th scope="col" class="numeric"><button type="button" data-sort="win_probability_d_without_news">D win % without news</button></th></tr></thead><tbody id="race-table-body"><tr><td colspan="8">Loading…</td></tr></tbody></table></div>
+
+    <section id="panel-map" class="tab-panel" role="tabpanel" aria-labelledby="tab-map" hidden>
+      <section class="forecast-map-panel" aria-labelledby="forecast-heading">
+        <div class="forecast-map-heading"><div><p class="eyebrow">THE BALANCE OF POWER</p><h2 id="forecast-heading">2026 seat projections</h2></div><div class="map-switch" role="group" aria-label="Select chamber"><button type="button" data-map-office="house" aria-pressed="true">House <span>435 seats</span></button><button type="button" data-map-office="senate" aria-pressed="false">Senate <span>Seats up in 2026</span></button></div></div>
+        <div class="chamber-tally"><div class="party-total dem-total"><span>Democrats</span><strong id="map-dem-count">—</strong><small id="map-dem-detail"></small></div><div class="tally-context"><strong id="map-seat-context">435 seats · 218 for a majority</strong><span id="map-coverage">Loading race projections…</span><span id="map-control" class="control-odds"></span></div><div class="party-total rep-total"><span>Republicans</span><strong id="map-rep-count">—</strong><small id="map-rep-detail"></small></div></div>
+        <div class="chamber-bar-wrap"><div class="chamber-bar" id="chamber-bar" aria-label="Projected chamber seats"></div><div class="majority-marker" id="majority-marker"><span id="majority-label">218</span></div></div>
+        <div class="map-legend" aria-label="Rating by Democratic or Republican win probability"><span><i style="background:#1c408c"></i>Safe D ≥95%</span><span><i style="background:#577ccc"></i>Likely D 85–95%</span><span><i style="background:#8aafff"></i>Lean D 65–85%</span><span><i style="background:#949bb3"></i>Tilt D 55–65%</span><span><i style="background:#9e8767"></i>Toss-up</span><span><i style="background:#cf8980"></i>Tilt R 55–65%</span><span><i style="background:#ff8b98"></i>Lean R 65–85%</span><span><i style="background:#ff5865"></i>Likely R 85–95%</span><span><i style="background:#bf1d29"></i>Safe R ≥95%</span><span><i style="background:#d9d9d9"></i>No 2026 election / not up</span></div>
+        <div id="map-loading" class="map-loading" role="status">Calculating the seat map…</div>
+        <div id="house-map" class="house-map" aria-label="House districts as dots within each state" hidden></div>
+        <div id="senate-map" class="senate-map" aria-label="Senate state map" hidden></div>
+        <div id="map-tooltip" class="map-tooltip" role="tooltip" hidden></div>
+        <div class="map-bottom"><p id="map-geography-note"></p><span id="map-updated"></span></div>
+        <details class="competitive-races"><summary>Closest projected races <span id="competitive-count"></span></summary><div id="competitive-list" class="competitive-list"></div></details>
+      </section>
     </section>
-    <section class="metrics" aria-label="Database coverage">
-      <div class="metric"><div class="metric-label">Races in database <span aria-hidden="true">↗</span></div><strong id="metric-races">—</strong><small>House, Senate &amp; governor</small></div>
-      <div class="metric"><div class="metric-label">Demographic cells <span aria-hidden="true">◫</span></div><strong id="metric-demographics">—</strong><small>Race × sex × education</small></div>
-      <div class="metric"><div class="metric-label">Published estimates <span aria-hidden="true">◷</span></div><strong id="metric-history">—</strong><small id="history-coverage">Survey cells meeting publication thresholds</small></div>
-      <div class="metric"><div class="metric-label">News observations <span aria-hidden="true">≋</span></div><strong id="metric-news">—</strong><small>Inputs with source provenance</small></div>
+
+    <section id="panel-table" class="tab-panel" role="tabpanel" aria-labelledby="tab-table" hidden>
+      <section id="race-table" class="forecast-table-panel" aria-labelledby="table-heading">
+        <div class="forecast-map-heading"><div><p class="eyebrow">EVERY RACE</p><h2 id="table-heading">Win probability &amp; margin</h2></div><div class="map-switch" role="group" aria-label="Select office for the table"><button type="button" data-table-office="senate" aria-pressed="true">Senate <span>35 races</span></button><button type="button" data-table-office="governor" aria-pressed="false">Governor <span>36 races</span></button><button type="button" data-table-office="house" aria-pressed="false">House <span>435 races</span></button></div></div>
+        <p class="table-explainer">Margin = projected Democratic minus Republican two-party share. <b>2024 baseline</b> is the actual 2024 presidential result in that state or district (2026 lines where redrawn). <b>News shift</b> is how much the news model moves the margin. <b>Win % without news</b> shows the same race with no news adjustment. Select a row to see what drives that race.</p>
+        <div class="table-tools"><label class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m16 16 4.5 4.5"></path></svg><input id="table-search" type="search" placeholder="Filter by state, district, or rating" aria-label="Filter race table" autocomplete="off"></label><span id="table-count" role="status"></span><a class="table-download" href="data/forecast_table_2026.csv" download="forecast_table_2026.csv">Download CSV ↓</a></div>
+        <div class="data-table-wrap race-table-wrap"><table class="race-table"><caption class="sr-only">Win probability and projected margin for every race</caption><thead><tr><th scope="col"><button type="button" data-sort="label">Race</button></th><th scope="col"><button type="button" data-sort="rating">Rating</button></th><th scope="col" class="numeric"><button type="button" data-sort="win_probability_d">D win %</button></th><th scope="col" class="numeric"><button type="button" data-sort="win_probability_r">R win %</button></th><th scope="col" class="numeric"><button type="button" data-sort="margin_pp">Projected margin</button></th><th scope="col" class="numeric"><button type="button" data-sort="baseline_margin_pp">2024 baseline</button></th><th scope="col" class="numeric"><button type="button" data-sort="news_margin_shift_pp">News shift</button></th><th scope="col" class="numeric"><button type="button" data-sort="win_probability_d_without_news">D win % without news</button></th></tr></thead><tbody id="race-table-body"><tr><td colspan="8">Loading…</td></tr></tbody></table></div>
+      </section>
     </section>
 
-    <div class="workspace">
-      <aside class="race-browser" aria-label="Find a race">
-        <div class="browser-heading"><span class="eyebrow">EXPLORE THE MAP</span><h2>Find a race</h2></div>
-        <label class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m16 16 4.5 4.5"></path></svg><input id="race-search" type="search" placeholder="State, district, or race" aria-label="Search races" autocomplete="off"></label>
-        <div class="office-filter" role="group" aria-label="Filter by office"><button type="button" data-office="" aria-pressed="true">All</button><button type="button" data-office="house" aria-pressed="false">House</button><button type="button" data-office="senate" aria-pressed="false">Senate</button><button type="button" data-office="governor" aria-pressed="false">Governor</button></div>
-        <label class="field-label" for="state-filter">State</label><select id="state-filter"><option value="">All states &amp; territories</option></select>
-        <div class="race-count" id="race-count" role="status">Loading races…</div>
-        <div id="race-list" class="race-list" aria-label="Available races" aria-busy="true"><div class="list-loading">Loading the race directory…</div></div>
-        <div class="browser-foot"><span class="tiny-dot"></span> Data coverage varies by race.<br><a href="#sources">View sources &amp; methodology <span aria-hidden="true">↗</span></a></div>
-      </aside>
+    <section id="panel-district" class="tab-panel" role="tabpanel" aria-labelledby="tab-district" hidden>
+      <div class="workspace">
+        <aside class="race-browser" aria-label="Find a race">
+          <div class="browser-heading"><span class="eyebrow">FIND A DISTRICT OR STATE</span><h2>Search races</h2></div>
+          <label class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m16 16 4.5 4.5"></path></svg><input id="race-search" type="search" placeholder="State, district, or race" aria-label="Search races" autocomplete="off"></label>
+          <div class="office-filter" role="group" aria-label="Filter by office"><button type="button" data-office="" aria-pressed="true">All</button><button type="button" data-office="house" aria-pressed="false">House</button><button type="button" data-office="senate" aria-pressed="false">Senate</button><button type="button" data-office="governor" aria-pressed="false">Governor</button></div>
+          <label class="field-label" for="state-filter">State</label><select id="state-filter"><option value="">All states</option></select>
+          <div class="race-count" id="race-count" role="status">Loading races…</div>
+          <div id="race-list" class="race-list" aria-label="Available races" aria-busy="true"><div class="list-loading">Loading the race directory…</div></div>
+        </aside>
 
-      <div class="research-area" id="race-detail" aria-busy="true">
-        <div id="detail-loading" class="detail-loading" role="status">Loading research workspace…</div>
-        <div id="detail-content" hidden>
-          <section class="race-heading"><div><p class="eyebrow" id="race-kicker">2026 GENERAL ELECTION</p><h2 id="race-title">Select a race</h2><p id="race-subtitle"></p></div><span class="outline-badge" id="race-office">—</span></section>
-          <nav class="section-nav" aria-label="Research sections"><a href="#population" class="active">Population</a><a href="#history">Voting history</a><a href="#outlook">2026 outlook</a></nav>
-          <div id="boundary-note" class="boundary-note" hidden></div>
-          <div id="race-forecast-card" class="race-forecast-card" hidden></div>
-
-          <section id="population" class="panel" aria-labelledby="population-heading">
-            <div class="panel-heading"><div><p class="eyebrow">01 / THE CONSTITUENCY</p><h3 id="population-heading">A demographic portrait</h3></div><span id="acs-badge" class="soft-badge">ACS population data</span></div>
-            <p class="section-copy">Race, sex, and educational attainment describe the population. They do not establish how individuals vote.</p>
-            <div id="population-empty" class="empty-state" hidden></div>
-            <div id="population-content" hidden><div class="population-stat"><strong id="population-total">—</strong><div><span>residents represented in modeled cells</span><small id="population-vintage"></small></div></div><div id="population-stack" class="population-stack" role="img" aria-label="Population across demographic groups"></div><div id="population-legend" class="population-legend"></div><div class="data-table-wrap"><table><caption class="sr-only">Demographic population estimates by race, sex, and education</caption><thead><tr><th scope="col">Demographic group</th><th scope="col">Sex</th><th scope="col">Education</th><th scope="col" class="numeric">Residents</th><th scope="col" class="numeric">Margin of error</th></tr></thead><tbody id="demographic-table"></tbody></table></div><button id="expand-demographics" class="text-button" type="button" hidden>Show all demographic cells <span aria-hidden="true">↓</span></button></div>
-            <p class="method-note"><span aria-hidden="true">ⓘ</span> <span id="population-caveat">Education estimates cover residents age 25 and older. This is not the eligible electorate. ACS sex categories and race categories follow the source data.</span></p>
-          </section>
-
-          <section id="history" class="panel" aria-labelledby="history-heading">
-            <div class="panel-heading"><div><p class="eyebrow">02 / OBSERVED PREFERENCES</p><h3 id="history-heading">How did this group vote?</h3></div><span class="soft-badge">Democratic vote share</span></div>
-            <p class="section-copy">Compare a demographic combination with the same group nationally. Values come from survey estimates, not individual ballot records.</p>
-            <div class="group-filters"><label>Survey race group<select id="group-race"></select></label><label>Sex<select id="group-sex"></select></label><label>Education<select id="group-education"></select></label></div>
-            <p id="survey-definition" class="method-note"></p>
-            <div id="history-empty" class="empty-state" hidden><span class="empty-icon" aria-hidden="true">↗</span><h4>No survey estimate for this combination</h4><p>Population counts cannot reveal group voting preferences. Import documented survey estimates to compare local results with the national benchmark.</p></div>
-            <div id="history-content" hidden><div class="chart-legend"><span><i class="legend-line local"></i>Selected constituency</span><span><i class="legend-line national"></i>Same group nationally</span></div><div id="history-chart" class="history-chart"></div><div class="history-stats"><div><span>Latest local estimate</span><strong id="latest-local">—</strong><small id="latest-year"></small></div><div><span>National benchmark</span><strong id="latest-national">—</strong><small>Same demographic combination</small></div><div><span>Difference from national</span><strong id="latest-gap">—</strong><small>Percentage points</small></div></div><div class="data-table-wrap"><table><caption class="sr-only">Historical local and national Democratic vote shares</caption><thead><tr><th scope="col">Election</th><th scope="col" class="numeric">Local</th><th scope="col" class="numeric">National</th><th scope="col" class="numeric">Sample</th><th scope="col">Evidence</th></tr></thead><tbody id="history-table"></tbody></table></div></div>
-            <p class="method-note"><span aria-hidden="true">ⓘ</span> Missing observations stay missing. Small intersectional samples can be noisy; aggregate election results cannot identify demographic voting patterns.</p>
-          </section>
-
-          <section id="outlook" class="panel outlook-panel" aria-labelledby="outlook-heading">
-            <div class="panel-heading"><div><p class="eyebrow">03 / THE ROAD TO NOVEMBER</p><h3 id="outlook-heading">A transparent 2026 outlook</h3></div><span id="model-status" class="status-badge">Awaiting evidence</span></div>
-            <p class="section-copy" id="projection-message">A news sentiment score needs a validated relationship to vote choice before it can support an election forecast.</p>
-            <div id="forecast-output" hidden></div>
-            <div id="forecast-cohorts" hidden><div class="cohort-heading"><h4>How demographic shifts add up</h4><span>Democratic two-party share</span></div><div class="data-table-wrap"><table class="forecast-cohort-table"><caption class="sr-only">2024 modeled baseline, news-based 2026 estimate, and population weight for every demographic combination</caption><thead><tr><th>Demographic combination</th><th class="numeric">Population weight</th><th class="numeric">2024 baseline</th><th class="numeric">2026 estimate</th><th class="numeric">Change</th></tr></thead><tbody id="forecast-cohort-table"></tbody></table></div><p id="forecast-weight-note" class="method-note"></p></div>
+        <div class="research-area" id="race-detail" aria-busy="true">
+          <div id="detail-loading" class="detail-loading" role="status">Loading race…</div>
+          <div id="detail-content" hidden>
+            <section class="race-heading"><div><p class="eyebrow" id="race-kicker">2026 GENERAL ELECTION</p><h2 id="race-title">Select a race</h2><p id="race-subtitle"></p></div><span class="outline-badge" id="race-office">—</span></section>
+            <div id="boundary-note" class="boundary-note" hidden></div>
+            <div id="race-forecast-card" class="race-forecast-card" hidden></div>
             <div id="news-signal-summary" class="news-signal-summary"></div>
-            <details class="manual-scenario"><summary>Adjust an additional sensitivity scenario</summary><div class="scenario-box"><div class="scenario-heading"><div><h4>Explore news &amp; vote-share assumptions</h4><p>A separate sensitivity scenario for the selected demographic combination.</p></div><span class="scenario-label">SCENARIO</span></div><p id="news-feature" class="scenario-disclaimer">Loading the news feature…</p><label class="slider-label" for="news-coefficient"><span>Assumed vote-share response per unit of news tone</span><output id="news-coefficient-label" for="news-coefficient">0.0 pp / unit</output></label><input id="news-coefficient" type="range" min="-15" max="15" step="0.5" value="0"><div class="slider-extents"><span>−15 pp / unit</span><span>No assumed effect</span><span>+15 pp / unit</span></div><label class="slider-label" for="scenario-shift"><span>Additional assumed change in Democratic vote share</span><output id="scenario-shift-label" for="scenario-shift">0.0 pp</output></label><input id="scenario-shift" type="range" min="-15" max="15" step="0.5" value="0" disabled><div class="slider-extents"><span>−15 pp</span><span>No change</span><span>+15 pp</span></div><div id="scenario-result" class="scenario-result" role="status">A documented baseline is needed before this scenario can be calculated.</div><p class="scenario-disclaimer">These controls change only this sensitivity scenario. They do not change the race forecast or seat map.</p></div></details>
-            <div class="news-heading"><h4>News evidence</h4><span id="news-count">0 observations</span></div><div id="news-list" class="news-list"></div>
-          </section>
+            <section id="forecast-cohorts" class="panel" aria-labelledby="cohorts-heading" hidden>
+              <div class="panel-heading"><div><p class="eyebrow">DEMOGRAPHIC BREAKDOWN</p><h3 id="cohorts-heading">How each group adds up</h3></div><span class="soft-badge">Democratic two-party share</span></div>
+              <div class="data-table-wrap"><table class="forecast-cohort-table"><caption class="sr-only">2024 modeled baseline, 2026 estimate, and turnout weight for every demographic combination</caption><thead><tr><th>Demographic combination</th><th class="numeric">Turnout weight</th><th class="numeric">2024 baseline</th><th class="numeric">2026 estimate</th><th class="numeric">Change</th></tr></thead><tbody id="forecast-cohort-table"></tbody></table></div>
+              <p id="forecast-weight-note" class="method-note"></p>
+            </section>
+          </div>
         </div>
       </div>
-    </div>
-
-    <section id="sources" class="sources-panel" aria-labelledby="sources-heading"><div class="sources-intro"><p class="eyebrow">BUILT TO BE QUESTIONED</p><h2 id="sources-heading">Evidence before prediction.</h2><p>Every estimate should have a source, a population definition, and a clear statement of what it can tell us.</p></div><div><h3>Sources &amp; coverage</h3><div id="sources-list" class="sources-list"><p>Loading source information…</p></div><details class="limitations" open><summary>Research limitations</summary><ul id="limitations-list"><li>Demographic associations do not establish individual voting behavior.</li><li>News sentiment is an exploratory input until calibrated and evaluated against held-out elections.</li></ul></details></div></section>
+    </section>
   </main>
-  <footer><span class="brand footer-brand">electorate.</span><span>A local research workspace · 2026 US midterm elections</span><a href="#main">Back to top ↑</a></footer>
+  <footer><span class="brand footer-brand">electorate.</span><span>2026 US midterm elections · experimental forecast</span><a href="#main">Back to top ↑</a></footer>
   <div id="live-status" class="sr-only" role="status" aria-live="polite"></div>
 </body>
 </html>

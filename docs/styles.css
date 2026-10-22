@@ -34,3 +34,29 @@
 .pick-chip{display:inline-block;min-width:16px;text-align:center;color:#fff;font-size:10px;font-weight:700;border-radius:3px;padding:1px 4px;margin-right:6px}.picks-all{margin-top:16px}
 @media(max-width:1000px){.picks-stats{grid-template-columns:repeat(3,minmax(0,1fr))}.picks-stats>div{border-bottom:1px solid var(--line)}}
 @media(max-width:800px){.picks-panel{padding:22px 16px;margin-top:24px}.picks-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.picks-stats strong{font-size:24px}.picks-updated{white-space:normal}}
+
+/* Tabs */
+.site-tabs{position:sticky;top:0;z-index:10;display:flex;gap:4px;padding:0 5.5%;background:var(--paper);border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.site-tabs::-webkit-scrollbar{display:none}
+.site-tabs button{flex-shrink:0;border:0;background:transparent;padding:15px 16px 13px;font-size:13px;font-weight:600;color:#6f7a74;border-bottom:3px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.site-tabs button:hover{color:var(--teal-dark)}
+.site-tabs button[aria-selected=true]{color:var(--teal);border-bottom-color:var(--teal)}
+.tab-panel{padding-top:28px}
+.tab-panel .picks-panel{margin-top:0}
+.intro-head h2{font:normal clamp(26px,2.4vw,34px)/1.15 var(--serif);letter-spacing:-.8px;margin:0}
+.text-link{border:0;background:transparent;padding:0;font-size:11px;color:var(--teal);text-align:right;max-width:125px;line-height:1.9;cursor:pointer}
+.text-link:hover{text-decoration:underline}
+#panel-district .news-signal-summary{background:#fff;border-color:var(--line);margin:0 0 22px}
+#panel-district .race-heading{padding-top:0}
+@media(min-width:1501px){.site-tabs{padding-left:calc((100% - 1335px)/2);padding-right:calc((100% - 1335px)/2)}}
+@media(max-width:800px){.site-tabs{padding:0 5%}.site-tabs button{padding:13px 12px 11px;font-size:12px}.tab-panel{padding-top:20px}}
+
+/* House dot map */
+.house-map svg{display:block;width:100%;height:auto;max-height:680px;margin:5px 0 0}
+.house-state-outline{fill:#f3f4ef;stroke:#c3cbbd;stroke-width:.8;stroke-linejoin:round;vector-effect:non-scaling-stroke;pointer-events:none}
+.house-dot{stroke:#fff;stroke-width:1;cursor:pointer;vector-effect:non-scaling-stroke;transition:stroke-width .1s}
+.house-dot:hover,.house-dot:focus{stroke:#142d22;stroke-width:2;outline:none}
+.house-dot.selected-seat{stroke:#142d22;stroke-width:2.5}
+.as-of{font-weight:500}
+#panel-district .race-forecast-facts,#panel-district .news-signal-stats{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:700px){#panel-district .race-forecast-facts,#panel-district .news-signal-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
