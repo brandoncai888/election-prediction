@@ -142,51 +142,60 @@ def forecast_table(conn,as_of,office=None):
     return [{k:r.get(k) for k in TABLE_COLUMNS} for r in rows]
 
 
-BJC_COLUMNS=('race_id','chamber','predicted_winner_party','candidate_name','win_probability')
+BJC_COLUMNS=('state','district','chamber','predicted_winner','party','model_probability')
 PARTY_NAMES={'D':'Democratic','R':'Republican'}
 
 
-def _bjc_id(race):
+def _bjc_key(race):
+    """(state, district, chamber): district is 01-style or AL for House, blank for Senate."""
     if race['office']=='senate':
-        return f"{race['state']}-SEN"
+        return race['state'],'','Senate'
     district=str(race.get('district') or '00').zfill(2)
-    return f"{race['state']}-{'AL' if district=='00' else district}"
+    return race['state'],'AL' if district=='00' else district,'House'
+
+
+def _bjc_row_key(row):
+    # Sheets written before the column change identify races as AK-SEN / AL-01.
+    if 'race_id' in row:
+        state,_,seat=row['race_id'].partition('-')
+        return (state,'','Senate') if seat=='SEN' else (state,seat,'House')
+    return row['state'],row['district'],row['chamber']
 
 
 def write_bjc_prediction(conn,as_of,path):
-    """Fill the House/Senate submission sheet: winner party and its win probability.
+    """Fill the House/Senate submission sheet with the points-maximizing pick.
 
-    Rows keep the file's existing order, and any candidate names already typed
-    in are preserved; the database has no candidate roster to fill them.
+    The pick follows electiondb.kalshi.choose_pick; model_probability is the
+    model's win probability for the picked party, so underdog picks show < 0.5.
+    predicted_winner is the Wikipedia nominee for that party (checked against
+    Kalshi; see electiondb.kalshi.pick_name), otherwise any name already typed
+    in. Rows keep the file's order.
     """
     import csv
     from pathlib import Path
+    from .kalshi import strategy
     path=Path(path)
     existing=[]
     if path.exists():
         with open(path,encoding='utf-8-sig',newline='') as stream:
             existing=list(csv.DictReader(stream))
     races={}
-    for race in forecast_overview(conn,as_of)['races']:
-        if race['office'] in ('house','senate'):
-            races[_bjc_id(race)]=race
-    order=[row['race_id'] for row in existing] or sorted(races)
-    names={row['race_id']:row.get('candidate_name','') for row in existing}
-    missing=[race_id for race_id in order if race_id not in races]
+    for race in strategy(conn,as_of)['races']:
+        races[_bjc_key(race)]=race
+    order=[_bjc_row_key(row) for row in existing] or sorted(races,key=lambda k:(k[2]!='Senate',k))
+    names={_bjc_row_key(row):row.get('predicted_winner',row.get('candidate_name','')) for row in existing}
+    missing=[key for key in order if key not in races]
     if missing:
-        raise ValueError(f'{path.name} lists races with no saved forecast: {", ".join(missing[:5])}')
+        raise ValueError(f'{path.name} lists races with no saved forecast: {", ".join("-".join(filter(None,k[:2])) for k in missing[:5])}')
     with open(path,'w',newline='',encoding='utf-8') as stream:
         writer=csv.DictWriter(stream,fieldnames=BJC_COLUMNS)
         writer.writeheader()
-        for race_id in order:
-            race=races[race_id]
-            probability=race.get('win_probability_d')
-            winner=race.get('winner')
-            writer.writerow({'race_id':race_id,'chamber':race['office'].title(),
-                'predicted_winner_party':PARTY_NAMES.get(winner,''),'candidate_name':names.get(race_id,''),
-                'win_probability':'' if probability is None or winner not in PARTY_NAMES else
-                    round(probability if winner=='D' else 1-probability,4)})
-    return {'path':str(path),'rows':len(order)}
+        for key in order:
+            race=races[key]
+            writer.writerow({'state':key[0],'district':key[1],'chamber':key[2],
+                'predicted_winner':race['candidate'] or names.get(key,''),'party':PARTY_NAMES[race['pick']],
+                'model_probability':round(race['model_probability'],4)})
+    return {'path':str(path),'rows':len(order),'underdog_picks':sum(r['reason']=='underdog_value' for r in races.values())}
 
 
 def write_forecast_table(conn,as_of,path):

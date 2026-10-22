@@ -14,6 +14,7 @@ import shutil
 from pathlib import Path
 
 from .forecasts import forecast_overview, forecast_table, TABLE_COLUMNS
+from .kalshi import strategy
 from .server import WEB, AS_OF, summary, groups_payload, races_payload, race_detail, race_news
 
 OFFICES = ('house', 'senate', 'governor')
@@ -90,6 +91,7 @@ def export_site(conn, out, as_of=AS_OF):
     sizes['races'] = _write_json(data / 'races.json', {'races': races})
     for office in OFFICES:
         sizes['predictions-' + office] = _write_json(data / f'predictions-{office}.json', forecast_overview(conn, as_of, office))
+    sizes['strategy'] = _write_json(data / 'strategy.json', strategy(conn, as_of))
     # Races without race-specific articles all show this list; store it once.
     shared = race_news(conn, None, as_of)
     shared_ids = [item['news_id'] for item in shared]

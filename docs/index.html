@@ -17,6 +17,16 @@
   </header>
 
   <main id="main">
+    <section id="picks" class="picks-panel" aria-labelledby="picks-heading" hidden>
+      <div class="forecast-map-heading"><div><p class="eyebrow">HOW I CHOSE MY PREDICTIONS</p><h2 id="picks-heading">Picks that maximize expected points</h2></div><span id="picks-updated" class="picks-updated"></span></div>
+      <p class="picks-lede">A correct pick scores <b>log<sub>½</sub>(p)</b> points, where <i>p</i> is Kalshi's price for the candidate I pick; a wrong pick scores 0. Calling a 97% favorite earns 0.04 points, while calling a 3% long shot earns 5.1, so the model's favorite is not always the best pick. Each House and Senate race is decided by these rules:</p>
+      <ol id="picks-rules" class="method-steps picks-rules"></ol>
+      <div id="picks-stats" class="picks-stats"></div>
+      <h3 class="picks-subheading">Races where I pick the model's underdog</h3>
+      <div class="data-table-wrap picks-table-wrap"><table class="picks-table"><caption class="sr-only">Races where the pick goes against the model favorite</caption><thead><tr><th scope="col">Race</th><th scope="col">My pick</th><th scope="col" class="numeric">Model win %</th><th scope="col" class="numeric">Kalshi price</th><th scope="col" class="numeric">Points if right</th><th scope="col" class="numeric">Expected points</th><th scope="col" class="numeric">Favorite's expected points</th></tr></thead><tbody id="picks-underdogs"></tbody></table></div>
+      <details class="competitive-races picks-all"><summary>Every race decided on expected points <span id="picks-close-count"></span></summary><div class="data-table-wrap picks-table-wrap"><table class="picks-table"><caption class="sr-only">Every race where the model favorite is at or below the automatic-pick threshold</caption><thead><tr><th scope="col">Race</th><th scope="col">Model favorite</th><th scope="col" class="numeric">Model</th><th scope="col" class="numeric">Kalshi D / R</th><th scope="col" class="numeric">Favorite EV</th><th scope="col" class="numeric">Underdog EV</th><th scope="col">Decision</th></tr></thead><tbody id="picks-close"></tbody></table></div></details>
+    </section>
+
     <section class="intro" aria-labelledby="page-heading">
       <div class="intro-head"><h1 id="page-heading">2026 midterm forecast</h1><p class="intro-copy">Projections for all 435 House seats, 35 Senate contests and 36 governor races. <span id="as-of">2026 election cycle</span></p></div>
       <h2 class="sr-only">How the forecast works</h2>

@@ -594,8 +594,47 @@
     if(race){selectRace(race);$("race-detail").scrollIntoView?.({behavior:"smooth"});}
   }
 
+  // Submission picks (electiondb/kalshi.py): model odds weighed against Kalshi prices.
+  const partyColor = party => party === "D" ? "#1c408c" : party === "R" ? "#bf1d29" : "#6b7477";
+  const pickLabel = race => `<b class="pick-chip" style="background:${partyColor(race.pick)}">${escape(race.pick)}</b>${escape(race.candidate || (race.pick === "D" ? "Democrat" : "Republican"))}`;
+  const points = value => finite(value) ? value.toFixed(2) : "—";
+  const reasonLabel = {model_auto:"Model favorite (automatic)",favorite_value:"Favorite: better expected points",underdog_value:"Underdog: expected points ≥ threshold",third_candidate:"Favorite: strong third candidate",no_market:"Favorite: no Kalshi market"};
+
+  function renderStrategy(data) {
+    const rules=data.rules || {}, summary=data.summary || {}, races=Array.isArray(data.races)?data.races:[];
+    const auto=Math.round((rules.auto_pick_above ?? .8)*100), ratio=rules.underdog_ratio ?? 2, third=Math.round((rules.third_candidate ?? .05)*100);
+    $("picks-rules").innerHTML=[
+      `<li><b>Clear favorites are automatic.</b> If my model gives a candidate more than ${auto}%, I pick that candidate.</li>`,
+      `<li><b>Otherwise, compare expected points.</b> Expected points = model win probability × log<sub>½</sub>(Kalshi price). I pick the model's underdog only when its expected points are at least ${ratio}× the favorite's. Example: 30% in my model but 3% on Kalshi gives 0.30 × 5.06 = 1.52, against 0.70 × 0.04 = 0.03 for the favorite, so I take the underdog.</li>`,
+      `<li><b>Safeguards.</b> With no Kalshi market, or when an independent or third candidate trades at ${third}% or more, I keep the favorite, because the model only splits the vote between Democrats and Republicans. Kalshi prices are the bid/ask midpoint, floored at ${Math.round((rules.price_floor ?? .01)*100)}¢.</li>`
+    ].join("");
+    const reasons=summary.reasons || {}, picks=summary.picks || {};
+    const stat=(label,value,note)=>`<div><span>${label}</span><strong>${value}</strong><small>${note}</small></div>`;
+    $("picks-stats").innerHTML=[
+      stat("Races picked",fmt(summary.races),`House ${fmt((picks.house?.D ?? 0)+(picks.house?.R ?? 0))} · Senate ${fmt((picks.senate?.D ?? 0)+(picks.senate?.R ?? 0))}`),
+      stat("Automatic picks",fmt(reasons.model_auto),`Model favorite above ${auto}%`),
+      stat("Underdog picks",fmt(summary.underdog_picks),`Expected points ≥ ${ratio}× the favorite's`),
+      stat("Expected points",finite(summary.expected_points)?summary.expected_points.toFixed(1):"—","If the model's odds are right"),
+      stat("Picks by party",`${fmt((picks.house?.D ?? 0)+(picks.senate?.D ?? 0))} D · ${fmt((picks.house?.R ?? 0)+(picks.senate?.R ?? 0))} R`,`Senate ${fmt(picks.senate?.D)} D · ${fmt(picks.senate?.R)} R`)
+    ].join("");
+    $("picks-updated").textContent=data.kalshi_fetched_at?`Kalshi prices as of ${new Date(data.kalshi_fetched_at).toLocaleString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit",timeZoneName:"short"})}`:"Kalshi prices not fetched yet";
+    const kalshiPick=race=>race.pick==="D"?race.kalshi_d:race.kalshi_r;
+    const underdogs=races.filter(race=>race.reason==="underdog_value").sort((a,b)=>(b.expected_points ?? 0)-(a.expected_points ?? 0));
+    $("picks-underdogs").innerHTML=underdogs.length?underdogs.map(race=>`<tr data-race="${escape(race.race_id)}" tabindex="0"><td>${escape(race.label)}</td><td>${pickLabel(race)}</td><td class="numeric">${winPct(race.model_probability)}</td><td class="numeric">${winPct(kalshiPick(race))}</td><td class="numeric">${points(race.points_if_right)}</td><td class="numeric"><strong>${points(race.expected_points)}</strong></td><td class="numeric">${points(race.ev_favorite)}</td></tr>`).join(""):'<tr><td colspan="7">No race meets the underdog threshold.</td></tr>';
+    const close=races.filter(race=>race.reason!=="model_auto").sort((a,b)=>(b.underdog_ratio ?? -1)-(a.underdog_ratio ?? -1));
+    $("picks-close-count").textContent=`${close.length} races`;
+    $("picks-close").innerHTML=close.map(race=>`<tr data-race="${escape(race.race_id)}" tabindex="0"><td>${escape(race.label)}</td><td><b class="pick-chip" style="background:${partyColor(race.favorite)}">${escape(race.favorite)}</b></td><td class="numeric">${winPct(race.model_favorite_probability)}</td><td class="numeric">${winPct(race.kalshi_d)} / ${winPct(race.kalshi_r)}</td><td class="numeric">${points(race.ev_favorite)}</td><td class="numeric">${points(race.ev_underdog)}</td><td>${pickLabel(race)} <small>${escape(reasonLabel[race.reason] || race.reason)}</small></td></tr>`).join("");
+    show("picks",true);
+  }
+
+  async function loadStrategy() {
+    try { renderStrategy(await api("/api/strategy")); }
+    catch { show("picks",false); }
+  }
+
   async function initialize() {
     show("app-notice",false);
+    loadStrategy();
     if(/senate/i.test(window.location?.hash || ""))state.mapOffice="senate";
     const mapPromise=loadPredictions(state.mapOffice);
     loadTable(state.table.office);
@@ -634,6 +673,10 @@
   }));
   $("table-search").addEventListener("input",event=>{state.table.search=event.target.value;renderTable();});
   $("race-table-body").addEventListener("click",event=>{const row=event.target.closest?.("tr[data-race]");if(row)openTableRace(row.dataset.race);});
+  ["picks-underdogs","picks-close"].forEach(id=>{
+    $(id).addEventListener("click",event=>{const row=event.target.closest?.("tr[data-race]");if(row)openTableRace(row.dataset.race);});
+    $(id).addEventListener("keydown",event=>{const row=event.target.closest?.("tr[data-race]");if(row&&(event.key==="Enter"||event.key===" ")){event.preventDefault();openTableRace(row.dataset.race);}});
+  });
   $("race-table-body").addEventListener("keydown",event=>{const row=event.target.closest?.("tr[data-race]");if(row&&(event.key==="Enter"||event.key===" ")){event.preventDefault();openTableRace(row.dataset.race);}});
   document.addEventListener("keydown",event=>{if(event.key==="Escape")hideMapTooltip();});
   window.addEventListener("scroll",hideMapTooltip,{passive:true});

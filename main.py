@@ -26,6 +26,10 @@ def parser():
     elastic.add_argument('--summary',type=Path)
     subs.add_parser('fetch-anchors',help='Download actual 2024 presidential results by district and state (baseline anchors)')
     subs.add_parser('fetch-polls',help='Fetch generic-ballot aggregator averages (Wikipedia 2026 House page)')
+    kalshi=subs.add_parser('fetch-kalshi',help='Fetch Kalshi House/Senate prices and rewrite the submission picks')
+    kalshi.add_argument('--as-of',default='2026-10-21')
+    roster=subs.add_parser('fetch-candidates',help='Fetch 2026 general-election candidates from Wikipedia and rewrite the submission names')
+    roster.add_argument('--as-of',default='2026-10-21')
     polls=subs.add_parser('import-polls',help='Import generic-ballot averages CSV; see templates/polls.csv')
     polls.add_argument('csv',type=Path)
     subs.add_parser('build-midterm-inputs',help='Freeze midterm out-party gains and CES validated turnout by demographic cell')
@@ -105,6 +109,16 @@ def main(argv=None):
         elif args.command=='fetch-polls':
             from electiondb.environment import fetch_polls
             result=fetch_polls(conn,cache_dir=cache)
+        elif args.command=='fetch-kalshi':
+            from electiondb.kalshi import fetch_kalshi
+            from electiondb.forecasts import write_bjc_prediction
+            result=fetch_kalshi(conn,cache_dir=cache)
+            result['bjc_prediction']=write_bjc_prediction(conn,args.as_of,ROOT/'bjc_congress_prediction.csv')
+        elif args.command=='fetch-candidates':
+            from electiondb.candidates import fetch_candidates
+            from electiondb.forecasts import write_bjc_prediction
+            result=fetch_candidates(conn,cache_dir=cache)
+            result['bjc_prediction']=write_bjc_prediction(conn,args.as_of,ROOT/'bjc_congress_prediction.csv')
         elif args.command=='import-polls':
             from electiondb.environment import import_polls
             result=import_polls(conn,args.csv)
@@ -144,6 +158,11 @@ def main(argv=None):
                     news_report['polls']={k:v for k,v in fetch_polls(conn,cache_dir=cache).items() if k!='rows'}
                 except (ValueError,OSError,URLError,KeyError) as exc:
                     news_report['errors'].append({'source':'generic-ballot polls','error':str(exc)})
+                from electiondb.kalshi import fetch_kalshi
+                try:
+                    news_report['kalshi']=fetch_kalshi(conn,cache_dir=cache)
+                except (ValueError,OSError,URLError,KeyError) as exc:
+                    news_report['errors'].append({'source':'Kalshi markets','error':str(exc)})
             from electiondb.predict import predict_all
             from electiondb.forecasts import save_predictions
             payload=predict_all(conn,as_of=args.as_of,cache_dir=cache)

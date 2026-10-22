@@ -145,6 +145,9 @@ def serve(db_path,host='127.0.0.1',port=8000,as_of=AS_OF):
                             payload=race_detail(conn,arg('id'),arg('as_of',as_of))
                         elif parsed.path=='/api/predictions':
                             payload=forecast_overview(conn,arg('as_of',as_of),arg('office') or None)
+                        elif parsed.path=='/api/strategy':
+                            from .kalshi import strategy
+                            payload=strategy(conn,arg('as_of',as_of))
                         elif parsed.path=='/api/scenario':
                             race=conn.execute('SELECT * FROM races WHERE race_id=?',(arg('id'),)).fetchone()
                             if race is None:

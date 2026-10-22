@@ -30,6 +30,23 @@ Open **http://127.0.0.1:8000**. The database is already populated. To pull fresh
 - A breakdown for every race showing each demographic group's baseline, shift and population weight.
 - A CSV export: `data/forecast_table_2026.csv`.
 
+## Submission picks
+
+`bjc_congress_prediction.csv` holds one pick per House and Senate race, chosen to maximize expected points under the scoring rule: a correct pick earns log½(p) points, where p is Kalshi's price for that candidate; a wrong pick earns 0. The rules live in `electiondb/kalshi.py`:
+
+1. If the model gives a candidate more than 80% (`AUTO_PICK`), pick that candidate.
+2. Otherwise, expected points = model probability × log½(Kalshi price). Pick the model's underdog only when its expected points are at least 2× the favorite's (`UNDERDOG_RATIO`).
+3. Keep the favorite when Kalshi has no market, or when an independent or third candidate trades at 5% or more, since the model only splits the vote between the two parties.
+
+`model_probability` in the CSV is the model's probability for the picked party, so underdog picks show values below 0.5. Candidate names come from Wikipedia's general-election listings and are checked against Kalshi's. The dashboard opens with the rules and every pick.
+
+```powershell
+python main.py fetch-kalshi       # current Kalshi prices, then rewrite the picks
+python main.py fetch-candidates   # Wikipedia candidate roster, then rewrite the names
+```
+
+`python main.py refresh` also fetches Kalshi prices before regenerating the forecasts.
+
 ## Caveats
 
 This is a research prototype. The midterm history covers only four elections, and the news effect is fitted to just ten group-midterm data points, so it is small and imprecise. News tone reflects media coverage, not voter opinion. Candidates, incumbency and campaign spending are not modeled.
